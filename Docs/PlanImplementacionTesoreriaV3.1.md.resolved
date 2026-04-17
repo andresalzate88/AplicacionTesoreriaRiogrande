@@ -1,0 +1,473 @@
+# Plan de Implementación — Plataforma de Tesorería Riogrande V3.1
+
+> Basado en `DocumentoMaestroAplicacionTesoreriaV3.1.md` y el estado actual del código. Abril 2026.
+
+---
+
+## Qué cambió en V3.1 respecto a V3.0
+
+| Área | Cambio |
+|------|--------|
+| Archivos de aliados (§4) | **1 archivo por sede por mes** (antes: 1 por operación). Carpetas Cárnicos, Nutresa y Meals ahora tienen un `.xlsx` por sede (`DC_2026_04.xlsx`, `CC_2026_04.xlsx`, etc.). |
+| Doble validación antifraude (§4) | Al importar Cárnicos, Nutresa y Meals: el sistema cruza sede del nombre del archivo vs columna **Caja** fila a fila. Si no coinciden → NO procesar, alerta al admin/analista, bloquear hasta autorización explícita. |
+| Alpina sin validación cruzada (§4) | Archivo único con 3 sedes mezcladas; columna Caja es la única fuente de sede. No hay validación nombre-vs-columna. |
+| Familia excluida (§4) | Familia no maneja consignaciones a aliados. **No hay carpeta ni proceso de importación para Familia.** |
+
+---
+
+## Estado actual del proyecto
+
+El proyecto tiene base estructural en React + Vite + TypeScript + Tailwind + shadcn/ui. Las páginas existen como **mocks/prototipos** sin lógica real ni conexión a BD.
+
+| Archivo actual | Vista | Estado |
+|---|---|---|
+| `LoginPage.tsx` | Auth | 🟡 UI básica sin Supabase Auth |
+| `InicioDia.tsx` | Inicio del Día | 🟡 UI completa con datos mock |
+| `EstadoPlanillas.tsx` | Vista 01 | 🟡 Prototipo UI con datos mock |
+| `CuadrePlanillas.tsx` | Vista 02 | 🟡 Prototipo parcial con datos mock |
+| `RecaudoDiario.tsx` | Vista 03 | 🟡 Prototipo UI con datos mock |
+| `Revision.tsx` | Vista 04 | 🟡 Prototipo UI con datos mock |
+| `Informes.tsx` | Vista 05 | 🟡 Prototipo UI con datos mock |
+| `Parametrizacion.tsx` | Admin | 🟡 Pestañas: Sedes, Bancos, Gastos, Retenciones, Empleados, Vehículos, Aliados, Cuentas, Parámetros Sistema |
+
+**Lo que falta:** Supabase, Auth real, BD, servicios, RLS, funciones PostgreSQL, SharePoint con doble validación V3.1, consecutivos, conciliación Alpina.
+
+---
+
+## Fases del plan
+
+---
+
+## 🔵 FASE 1 — Infraestructura y Base de Datos (Semanas 1–2)
+
+### Objetivo: Supabase configurado, SQL completo, funciones PostgreSQL y Auth funcionando.
+
+### 1.1 Configurar Supabase
+- Crear proyecto en supabase.com
+- Crear `.env.local` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
+- Instalar `@supabase/supabase-js`
+- **[NUEVO]** `src/lib/supabase.ts` — Cliente Supabase singleton, preparado para Azure
+- **[NUEVO]** `src/types/index.ts` — Tipos TypeScript de todas las entidades
+
+### 1.2 Ejecutar SQL del modelo de datos completo
+```
+1. Extensión: uuid-ossp
+2. Maestros: sedes, operaciones, parametros_contables, parametros_sistema,
+   empleados, vehiculos, consecutivos_cuadre
+3. Ingesta: documentos_erp (5 índices)
+4. Consignaciones: consignaciones_banco, consignaciones_aliados (índices)
+5. Operativa: recaudos_dia, cuadres, cuadre_tripulacion, cuadre_retenciones,
+   cuadre_desc_condicionados, cuadre_gastos_ruta, cuadre_anticipos_nomina,
+   destinos_efectivo, soportes_dia, checklist_revision
+6. Histórica (inmutable): hist_recaudos_dia, hist_cuadres, hist_tripulacion,
+   hist_retenciones, hist_gastos_ruta, hist_anticipos_nomina,
+   hist_desc_condicionados, hist_destinos
+7. audit_log (solo INSERT vía trigger)
+```
+
+### 1.3 Parámetros del sistema por defecto
+```sql
+INSERT INTO parametros_sistema(clave, valor, descripcion) VALUES
+  ('MARGEN_DIAS_ANTES',      '0',     'Días antes de la planilla para buscar consignaciones'),
+  ('MARGEN_DIAS_DESPUES',    '3',     'Días después de la planilla para buscar consignaciones'),
+  ('TIMEOUT_SESION_MINUTOS', '30',    'Minutos de inactividad para cerrar sesión y liberar bloqueos'),
+  ('HORA_SYNC_AUTOMATICA',   '07:00', 'Hora de sync automática de fuentes SharePoint'),
+  ('MAX_DIAS_SIN_APROBAR',   '2',     'Máximo de días cerrados sin aprobación de la analista');
+```
+
+### 1.4 Funciones PostgreSQL críticas
+```
+- generar_consecutivo_cuadre(p_sede_id, p_fecha)  → DMA-110426.01
+- generar_consecutivo_recaudo(p_sede_id, p_fecha) → DMA-RD-110426 / DMA-RD-110426-R1
+- get_saldo_anterior(p_sede_id, p_fecha)           → saldo del último día aprobado
+- validar_dias_sin_aprobar(p_sede_id)              → booleano, bloquea si >= MAX
+- liberar_bloqueos_expirados()                     → libera consignaciones por timeout
+- promover_a_historico(p_recaudo_id)               → copia a hist_* e inmoviliza datos
+```
+
+### 1.5 Configurar RLS en todas las tablas
+- `auxiliar` → solo sede propia
+- `analista` → todas las sedes, puede cuadrar
+- `director` → todo + anular aprobados
+- `admin` → acceso total
+- `contabilidad` → solo lectura
+- `audit_log` → solo INSERT desde triggers
+
+### 1.6 Datos maestros iniciales
+- 4 sedes: DMA, CAC, APA, QBO
+- 10 operaciones: DA, DC, DF, CA, CC, CN, AA, QC, QN, QM
+- Parámetros contables base (cuentas a confirmar con contabilidad)
+
+**✅ Entregable:** BD completa, RLS activo, funciones SQL listas.
+
+---
+
+## 🔵 FASE 2 — Autenticación y Roles (Semana 2)
+
+### Objetivo: Login real con control de acceso por rol y sede.
+
+### 2.1 useAuth
+- **[NUEVO]** `src/hooks/useAuth.ts` — `signIn`, `signOut`, `user` con `rol` y `sede_id` desde `user_metadata`. Preparado para Azure AD B2C.
+
+### 2.2 useSede
+- **[NUEVO]** `src/hooks/useSede.ts` — Sede activa del usuario; para analista/director/admin permite cambiar sede.
+
+### 2.3 LoginPage real
+- **[MODIFY]** `src/pages/LoginPage.tsx` — Auth real + redirección por rol:
+  - `auxiliar` → Vista 01
+  - `analista` / `director` / `admin` → Inicio del Día
+  - `contabilidad` → Informes
+
+### 2.4 Rutas protegidas
+- **[NUEVO]** `src/components/RequireRole.tsx` — guarda por rol
+- **[MODIFY]** `src/App.tsx` — rutas con `<RequireRole roles={[...]}/>`
+- **[MODIFY]** `src/components/AppSidebar.tsx` — menú dinámico por rol
+
+**✅ Entregable:** Login funcional, rutas protegidas por rol y sede.
+
+---
+
+## 🔵 FASE 3 — Capa de Servicios (Semana 3)
+
+### Objetivo: Toda la lógica de negocio en `src/services/` — nunca en componentes.
+
+- **[NUEVO]** `src/services/documentos.ts` — Queries y upsert plano ERP
+- **[NUEVO]** `src/services/cuadres.ts` — CRUD cuadres + antifraude
+- **[NUEVO]** `src/services/recaudos.ts` — Recaudo diario + saldo
+- **[NUEVO]** `src/services/consignaciones.ts` — Banco + aliados + bloqueos
+- **[NUEVO]** `src/services/sharepoint.ts` — Sync fuentes + doble validación V3.1
+- **[NUEVO]** `src/services/conciliacion-alpina.ts` — Cruce Alpina + asientos
+- **[NUEVO]** `src/services/parametros.ts` — CRUD parametrización
+- **[NUEVO]** `src/services/informes.ts` — Informes + exportación Odoo
+- **[NUEVO]** `src/lib/validaciones.ts` — Ecuaciones, diferencia=0, topes
+- **[NUEVO]** `src/lib/hash.ts` — SHA-256 antifraude
+- **[NUEVO]** `src/lib/sharepoint.ts` — Funciones client-side SharePoint
+- **[NUEVO]** `src/hooks/useCuadre.ts` — Estado del cuadre en progreso
+
+**✅ Entregable:** Layer de servicios con tipos TypeScript correctos.
+
+---
+
+## 🔵 FASE 4 — Parametrización Admin (Semana 4)
+
+### Objetivo: El admin puede configurar el sistema completo desde la UI.
+
+- **[MODIFY]** `src/pages/Parametrizacion.tsx` — conectar cada pestaña con Supabase:
+
+| Pestaña | Tabla / tipo | Acción |
+|---------|-------------|--------|
+| Sedes y operaciones | `sedes`, `operaciones` | Ver, activar/desactivar |
+| Bancos | `parametros_contables` BANCO_RG / BANCO_ALIADO | CRUD |
+| Tipos de gasto | `parametros_contables` TIPO_GASTO | CRUD + tope_maximo |
+| Tipos de retención | `parametros_contables` TIPO_RETENCION | CRUD |
+| Empleados | `empleados` | CRUD |
+| Vehículos | `vehiculos` | CRUD (placa, tipo, sede) |
+| Aliados | `parametros_contables` BANCO_ALIADO | CRUD |
+| Cuentas contables | `parametros_contables` (general) | CRUD |
+| Parámetros del Sistema | `parametros_sistema` | Edit modal — solo Admin |
+
+**✅ Entregable:** Admin puede parametrizar todo antes de operar.
+
+---
+
+## 🔵 FASE 5 — Integración SharePoint con doble validación V3.1 (Semanas 5–6)
+
+### Objetivo: Sync automático y manual con antifraude mejorado en importación de aliados.
+
+> ⚠️ El `client_secret` de Microsoft Graph **NUNCA** va en el frontend.
+
+### 5.1 Variables de entorno (solo Edge Function)
+```env
+GRAPH_TENANT_ID=...
+GRAPH_CLIENT_ID=...
+GRAPH_CLIENT_SECRET=...
+GRAPH_SHAREPOINT_SITE_ID=...
+GRAPH_DRIVE_ID=...
+```
+
+### 5.2 Estructura de archivos SharePoint V3.1
+```
+RioTesorería/Planos/
+├── ERP/
+│   ├── DA_2026_04.xlsx, DC_2026_04.xlsx, ...  (1 por operación por mes)
+│   └── ANTICIPOS_DA_2026_04.xlsx
+├── Bancos/
+│   ├── BANCOLOMBIA_CTA1_2026.xlsx  (12 pestañas)
+│   └── CFA_CTA1_2026.xlsx
+└── Aliados/
+    ├── Carnicos/   DC_2026_04 / CC_2026_04 / QC_2026_04  (1 por sede por mes)
+    ├── Nutresa/    CN_2026_04 / QN_2026_04
+    ├── Meals/      QM_2026_04  (solo Quibdó)
+    └── Alpina/     ALPINA_2026_03.xlsx  (3 sedes mezcladas, columna Caja)
+```
+
+> Familia NO tiene carpeta. No maneja consignaciones a aliados.
+
+### 5.3 Edge Function `sync-sharepoint` — Doble validación V3.1
+
+**Para Cárnicos, Nutresa, Meals:**
+```
+1. Calcular hash SHA-256
+2. Si hash igual → omitir
+3. Si nuevo o diferente:
+   a. Inferir sede del nombre del archivo:
+      DC_*.xlsx→Donmatías | CC_*.xlsx→Caucasia | QC_*.xlsx→Quibdó
+      CN_*.xlsx→Caucasia  | QN_*.xlsx→Quibdó  | QM_*.xlsx→Quibdó
+   b. Por cada fila: leer columna "Caja" → mapear a sede_id
+   c. VALIDACIÓN ANTIFRAUDE V3.1:
+      Comparar sede_inferida_del_nombre vs sede_de_columna_caja
+      Si alguna fila no coincide:
+        → NO procesar el archivo
+        → INSERT en audit_log: "Archivo DC_2026_04.xlsx contiene registros de Caucasia. Verificar."
+        → Notificar admin y analista
+        → Marcar archivo como PENDIENTE_AUTORIZACION
+        → Solo admin puede autorizar → re-proceso
+      Si todas coinciden → upsert en consignaciones_aliados (CERTIFICADA)
+4. Guardar hash_archivo y leido_sharepoint_at
+5. Si hash cambia post-aprobación → alerta director/admin
+```
+
+**Para Alpina:**
+```
+1. Calcular hash
+2. Si nuevo o diferente: leer columna "Caja" por fila → asignar sede_id directamente
+3. NO hay validación cruzada nombre-vs-Caja (archivo contiene 3 sedes mezcladas)
+4. upsert en consignaciones_aliados con estado_certificacion = SIN_CERTIFICAR
+5. Asiento contable de Alpina solo se genera tras conciliación mensual
+```
+
+**Para ERP y Bancos:** lógica igual que V3.0 (hash + upsert por clave única + inmutabilidad de aprobados).
+
+Agendar con pg_cron a `HORA_SYNC_AUTOMATICA`.
+
+### 5.4 Inicio del Día — conectar con datos reales
+- **[MODIFY]** `src/pages/InicioDia.tsx`
+  - Estado real de sync por fuente
+  - **[V3.1]** Alertas específicas de archivos con inconsistencias de sede (PENDIENTE_AUTORIZACION)
+  - Estado del día por sede con datos reales
+  - Botón "Sincronizar fuentes" → Edge Function
+
+**✅ Entregable:** Sync activo con doble validación antifraude; alertas de archivos inconsistentes en Inicio del Día.
+
+---
+
+## 🔵 FASE 6 — Vista 01: Estado de Planillas (Semana 6)
+
+- **[MODIFY]** `src/pages/EstadoPlanillas.tsx`
+- Tabla desde `documentos_erp` agrupada por planilla
+- Solo `CERRADA` son cuadrables
+- Badge `estado_at`: PENDIENTE / EN_CUADRE / ENVIADO_REVISION / APROBADO
+- Botón "Iniciar cuadre" → Vista 02
+- Informe planillas pendientes: CERRADAS sin cuadrar hace X días
+
+**✅ Entregable:** Vista 01 con planillas reales.
+
+---
+
+## 🔵 FASE 7 — Vista 02: Cuadre de Planillas (Semanas 7–8)
+
+- **[MODIFY]** `src/pages/CuadrePlanillas.tsx` — orquestra con stepper
+
+### Sub-componentes:
+
+| Componente | Sección | Qué hace |
+|-----------|---------|----------|
+| **[NUEVO]** `SeccionTripulacion.tsx` | 0 | Conductor, auxiliares, placa de `empleados`/`vehiculos` |
+| **[NUEVO]** `SeccionFacturas.tsx` | 2.1 | ERP docs + retenciones manuales + desc. condicionados |
+| **[NUEVO]** `SeccionGastos.tsx` | 2.2 | Gastos ruta + soporte + validación tope |
+| **[NUEVO]** `SeccionConsignacionesRG.tsx` | 2.3 | Selección de `consignaciones_banco` con bloqueo |
+| **[NUEVO]** `SeccionConsignacionesAliados.tsx` | 2.4 | Cárnicos/Nutresa/Meals: selección certificada; Alpina: libre |
+| **[NUEVO]** `SeccionEfectivo.tsx` | 2.5 | Conteo físico + diferencia + bloqueo si < 0 |
+| **[NUEVO]** `SeccionAnticipos.tsx` | 2.6 | ANT_NOMINA / PASAJE / HURTO_RUTA con denuncia |
+| **[NUEVO]** `SeccionResumen.tsx` | 2.7 | Ecuación final + confirmar si = 0 + consecutivo real |
+
+Al confirmar cuadre:
+- `generar_consecutivo_cuadre()` → `DMA-110426.01`
+- INSERT `cuadres` + `cuadre_tripulacion`
+- UPDATE `documentos_erp.numero_cuadre`, `estado_at = 'EN_CUADRE'`
+- UPDATE `consignaciones_banco/aliados.estado_cuadre = 'EN_CUADRE'`
+
+**✅ Entregable:** Cuadre completo con consecutivo real y antifraude activo.
+
+---
+
+## 🔵 FASE 8 — Vista 03: Recaudo Diario (Semanas 9–10)
+
+- **[MODIFY]** `src/pages/RecaudoDiario.tsx`
+
+### Secciones:
+
+**3.1 Resumen de cuadres** — tabla automática no editable, una fila por cuadre del día.
+
+**3.2 Destinos de efectivo** — tipos `TRASLADO` / `ANTICIPO_ALIADO` / `DINERO_CLIENTE` / `HURTO_BODEGA`. `HURTO_BODEGA` requiere denuncia → `PENDIENTE` hasta director.
+
+**3.3 Saldo de efectivo:**
+```
+saldo_anterior (solo admin edita)
++ efectivo_planillas (Σ efectivo_real cuadres)
+− efectivo_dispersado (Σ sección 3.2)
+= nuevo_saldo (calculado en BD)
+```
+
+**3.4 Soportes dinámicos (11 tipos)** — solo los que aplican al recaudo; upload a Storage.
+
+**Botón "Cerrar día":**
+- Validar soportes obligatorios + hurtos con denuncia
+- `validar_dias_sin_aprobar()` → bloquea si >= MAX
+- `generar_consecutivo_recaudo()` → `DMA-RD-110426`
+- `estado = 'CERRADO_AUXILIAR'`
+
+**✅ Entregable:** La auxiliar puede cerrar el día y enviarlo a revisión.
+
+---
+
+## 🔵 FASE 9 — Vista 04: Revisión y Aprobación (Semana 11)
+
+- **[MODIFY]** `src/pages/Revision.tsx`
+
+### Acciones:
+- **"Devolver con nota"** → nota obligatoria → `DEVUELTO`
+- **"Corregir sección 3.2"** → editar destinos sin anular
+- **"Solicitar anulación"** → notifica director
+- **"Aprobar"** (bloqueado si hurtos sin denuncia o HURTO_BODEGA sin autorización):
+  - `estado = 'APROBADO'`
+  - `promover_a_historico()` → copia a `hist_*`, actualiza estados, audit_log
+  - Asientos Odoo disponibles (excepto Alpina `SIN_CERTIFICAR`)
+
+### Solo director:
+- Anular cuadre aprobado → motivo obligatorio → audit_log
+- Autorizar hurtos PENDIENTE
+
+**✅ Entregable:** Analista aprueba; datos pasan a histórico inmutable.
+
+---
+
+## 🔵 FASE 10 — Informes y Exportación (Semana 12)
+
+- **[MODIFY]** `src/pages/Informes.tsx`
+- **[NUEVO]** `src/services/informes.ts`
+
+### Operativos: Estado planillas, Estado del día, Detalle del día, Planillas pendientes, Días sin aprobar.
+
+### Control: Saldos de efectivo, Consignaciones banco, Consignaciones aliados (con columna certificación Alpina), Cuadres anulados, Audit log.
+
+### Contables (Excel/CSV):
+- **Auditoría máximo detalle** — una fila por transacción atómica
+- **Plano asientos Odoo** — filtrado `APROBADO`, con débito/crédito/cuenta/tercero/analítica
+- Resumen recaudo por período, Detalle retenciones, Detalle anticipos nómina, Conciliación Alpina
+
+**✅ Entregable:** Contabilidad descarga plano Odoo sin reproceso.
+
+---
+
+## 🔵 FASE 11 — Conciliación Alpina (Post-MVP)
+
+- **[NUEVO]** `src/pages/ConciliacionAlpina.tsx` (solo analista)
+- **[NUEVO]** `src/services/conciliacion-alpina.ts`
+
+### Flujo:
+1. Sincronizar reporte mensual Alpina desde SharePoint
+2. Cruce automático: valor + fecha + sede (columna Caja del reporte)
+3. Cruzan → `CERTIFICADA` → asiento contable
+4. Ambiguas → revisión manual por analista
+5. Sin coincidencia → `DIFERENCIA`
+6. "Generar asientos certificados" → produce asientos del período
+
+**✅ Entregable:** Conciliación mensual Alpina con asientos para Odoo.
+
+---
+
+## 🔵 FASE 12 — Piloto y Rollout (Post-MVP)
+
+- Piloto con data real en sede Donmatías
+- Feedback y ajustes
+- Rollout a las 4 sedes con capacitación
+- Fase 2: API directa Odoo + posible migración Azure
+
+---
+
+## ⚠️ Controles antifraude — No negociables
+
+> [!CAUTION]
+> Estas funcionalidades son CRÍTICAS y no pueden omitirse:
+
+| Riesgo | Control V3.1 |
+|--------|-------------|
+| Plano ERP manipulado | SharePoint protegido + hash SHA-256; alerta si cambia post-procesamiento |
+| **[V3.1] Archivo aliado con sede incorrecta** | **Doble validación nombre-archivo vs columna Caja; si no coincide → NO procesar, alerta, requiere autorización admin** |
+| Consignación falsa | Solo selección de lista validada; Alpina libre con comprobante + conciliación |
+| Duplicar consignación | Bloqueo inmediato al seleccionar + timeout + `liberar_bloqueos_expirados()` |
+| Efectivo manipulado | Diferencia negativa bloquea sección 2.7 |
+| Duplicar planilla | `UNIQUE(operacion_documento)`; planilla con cuadre no cuadra de nuevo |
+| Gastos inflados | `tope_maximo` + justificación obligatoria |
+| Datos aprobados editados | `hist_*` inmutables; solo INSERT en `audit_log` |
+| Hurtos sin soporte | Estado `PENDIENTE_AUTORIZACION` bloquea aprobación |
+| Ocultar quién cuadró | `ejecutado_por = auth.uid()` siempre registrado |
+| Archivo alterado post-aprobación | Hash guardado; alerta inmediata director/admin |
+
+---
+
+## 📋 Archivos a crear / modificar
+
+### Nuevos
+| Archivo | Propósito |
+|---------|-----------|
+| `src/lib/supabase.ts` | Cliente Supabase singleton |
+| `src/lib/sharepoint.ts` | Funciones client-side SharePoint |
+| `src/lib/validaciones.ts` | Ecuaciones y reglas de negocio |
+| `src/lib/hash.ts` | SHA-256 antifraude |
+| `src/types/index.ts` | Tipos TypeScript |
+| `src/hooks/useAuth.ts` | Auth abstracta |
+| `src/hooks/useSede.ts` | Sede activa |
+| `src/hooks/useCuadre.ts` | Estado cuadre en progreso |
+| `src/services/documentos.ts` | Queries ERP |
+| `src/services/cuadres.ts` | CRUD cuadres |
+| `src/services/recaudos.ts` | Recaudo diario |
+| `src/services/consignaciones.ts` | Banco + aliados + bloqueos |
+| `src/services/sharepoint.ts` | Sync + doble validación V3.1 |
+| `src/services/conciliacion-alpina.ts` | Conciliación Alpina |
+| `src/services/parametros.ts` | CRUD parametrización |
+| `src/services/informes.ts` | Informes + exportación |
+| `src/components/RequireRole.tsx` | Protección rutas por rol |
+| `src/components/cuadre/Seccion*.tsx` | 8 sub-componentes de cuadre |
+| `src/pages/ConciliacionAlpina.tsx` | Conciliación Alpina |
+
+### A modificar
+| Archivo | Cambio |
+|---------|--------|
+| `src/App.tsx` | Rutas con RequireRole |
+| `src/pages/LoginPage.tsx` | Auth real + redirección por rol |
+| `src/pages/InicioDia.tsx` | Datos reales + alertas V3.1 |
+| `src/pages/EstadoPlanillas.tsx` | Datos reales |
+| `src/pages/CuadrePlanillas.tsx` | Stepper con 8 sub-componentes |
+| `src/pages/RecaudoDiario.tsx` | Datos reales + cierre |
+| `src/pages/Revision.tsx` | Checklist + aprobación + histórico |
+| `src/pages/Informes.tsx` | Informes reales + exportación |
+| `src/pages/Parametrizacion.tsx` | CRUD real |
+| `src/components/AppSidebar.tsx` | Menú dinámico por rol |
+
+---
+
+## 🗓️ Calendario
+
+| Semana | Fase | Entregable |
+|--------|------|-----------|
+| 1 | Fase 1 — BD + SQL + RLS | BD completa y funciones activas |
+| 2 | Fase 2 — Auth + Roles | Login funcional, rutas protegidas |
+| 3 | Fase 3 — Servicios | Layer de servicios listo |
+| 4 | Fase 4 — Parametrización | Admin configura el sistema |
+| 5 | Fase 5 — SharePoint + doble validación V3.1 | Sync con antifraude mejorado |
+| 6 | Fase 5 — Inicio del Día datos reales | Alertas archivos inconsistentes |
+| 7 | Fase 6+7 — Vista 01 + inicio Vista 02 | Planillas reales + tripulación + 2.1/2.2 |
+| 8 | Fase 7 — Vista 02 secciones 2.3–2.7 | Cuadre completo con consecutivo real |
+| 9 | Fase 8 — Vista 03 secciones 3.1/3.2/3.3 | Recaudo + destinos + saldo |
+| 10 | Fase 8 — Vista 03 sección 3.4 + cierre | Soportes + cierre real |
+| 11 | Fase 9 — Vista 04 | Revisión + aprobación + histórico |
+| 12 | Fase 10 — Informes | Todos los informes + plano Odoo |
+| Post-12 | Fase 11 — Conciliación Alpina | Certificación mensual |
+| Post-12 | Fase 12 — Piloto + Rollout | Donmatías → 4 sedes |
+
+---
+
+*Plan de implementación v3.1 — Plataforma Tesorería Riogrande · Abril 2026*
+*Basado en DocumentoMaestroAplicacionTesoreriaV3.1.md*

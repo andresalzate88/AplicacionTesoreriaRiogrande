@@ -1,11 +1,13 @@
-import { ClipboardList, Scale, CalendarDays, CheckSquare, BarChart3, Settings, LogOut } from 'lucide-react';
+import { ClipboardList, Scale, CalendarDays, CheckSquare, BarChart3, Settings, LogOut, Flag, Link } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 
 const menuItems = [
+  { id: 'inicio-dia', label: 'Inicio del Día', icon: Flag },
   { id: 'planillas', label: 'Estado de Planillas', icon: ClipboardList },
   { id: 'cuadre', label: 'Cuadre de Planillas', icon: Scale },
   { id: 'recaudo', label: 'Recaudo Diario', icon: CalendarDays },
   { id: 'revision', label: 'Revisión', icon: CheckSquare },
+  { id: 'conciliacion-alpina', label: 'Conciliación Alpina', icon: Link },
   { id: 'informes', label: 'Informes', icon: BarChart3 },
   { id: 'parametrizacion', label: 'Parametrización', icon: Settings },
 ];

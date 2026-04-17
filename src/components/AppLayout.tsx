@@ -1,17 +1,21 @@
 import AppSidebar from '@/components/AppSidebar';
 import { useAppStore } from '@/store/appStore';
+import InicioDia from '@/pages/InicioDia';
 import EstadoPlanillas from '@/pages/EstadoPlanillas';
 import CuadrePlanillas from '@/pages/CuadrePlanillas';
 import RecaudoDiario from '@/pages/RecaudoDiario';
 import Revision from '@/pages/Revision';
 import Informes from '@/pages/Informes';
 import Parametrizacion from '@/pages/Parametrizacion';
+import ConciliacionAlpina from '@/pages/ConciliacionAlpina';
 
 const pages: Record<string, React.FC> = {
+  'inicio-dia': InicioDia,
   planillas: EstadoPlanillas,
   cuadre: CuadrePlanillas,
   recaudo: RecaudoDiario,
   revision: Revision,
+  'conciliacion-alpina': ConciliacionAlpina,
   informes: Informes,
   parametrizacion: Parametrizacion,
 };
