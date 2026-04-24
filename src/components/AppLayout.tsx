@@ -8,6 +8,7 @@ import Revision from '@/pages/Revision';
 import Informes from '@/pages/Informes';
 import Parametrizacion from '@/pages/Parametrizacion';
 import ConciliacionAlpina from '@/pages/ConciliacionAlpina';
+import SincronizacionOdoo from '@/pages/SincronizacionOdoo';
 
 const pages: Record<string, React.FC> = {
   'inicio-dia': InicioDia,
@@ -16,6 +17,7 @@ const pages: Record<string, React.FC> = {
   recaudo: RecaudoDiario,
   revision: Revision,
   'conciliacion-alpina': ConciliacionAlpina,
+  'sincronizacion-odoo': SincronizacionOdoo,
   informes: Informes,
   parametrizacion: Parametrizacion,
 };

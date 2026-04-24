@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { formatCurrency } from '@/lib/format';
-import { Check, Paperclip, AlertTriangle } from 'lucide-react';
+import { Check, Paperclip, AlertTriangle, Plus, Trash2, X, Upload } from 'lucide-react';
 
 const cuadresMock = [
   { num: 'DMA-110426.01', planillas: 'DA-32926 / DA-32937', ventasCO: 22562905, ventasCR: 5070000, gastos: 935000, consigRio: 15574400, consigAli: 4800000, anticipos: 140000, hurtos: 0, efectivo: 1113305, difEfectivo: 500 },
   { num: 'DMA-110426.02', planillas: 'DC-32641', ventasCO: 5589617, ventasCR: 0, gastos: 320000, consigRio: 3200000, consigAli: 1200000, anticipos: 50000, hurtos: 0, efectivo: 819617, difEfectivo: 0 },
 ];
 
-const soportesMock = [
+const soportesBase: { nombre: string; estado: string; descripcion?: string; icono?: any }[] = [
   { nombre: 'Planillas liquidadas', estado: 'Adjunto' },
   { nombre: 'Comprobantes consignaciones Riogrande', estado: 'Adjunto' },
   { nombre: 'Comprobantes consignaciones aliados', estado: 'Pendiente' },
@@ -15,16 +15,52 @@ const soportesMock = [
   { nombre: 'Formato anticipos de nómina', estado: 'Pendiente' },
 ];
 
+type TipoDestino32 = 'Consignación a Riogrande' | 'Anticipo a Aliado' | 'Gasto' | 'Anticipo Nómina' | 'Traslado de Caja';
+
+interface Destino32 {
+  id: string;
+  tipo: TipoDestino32;
+  destinoNombre: string;
+  detalle: string;
+  valor: number;
+}
+
+const destinosInit32: Destino32[] = [
+  { id: '1', tipo: 'Consignación a Riogrande', destinoNombre: 'Bancolombia Ahorros RIO', detalle: 'REF-2847361', valor: 3000000 },
+  { id: '2', tipo: 'Anticipo a Aliado', destinoNombre: 'Anticipo Cárnicos DMA', detalle: 'CARN-00123', valor: 2000000 },
+  { id: '3', tipo: 'Traslado de Caja', destinoNombre: 'Caja Menor DMA', detalle: '—', valor: 500000 },
+];
+
+const parametrosDestinos: Record<TipoDestino32, string[]> = {
+  'Consignación a Riogrande': ['Bancolombia Ahorros RIO', 'CFA RIO'],
+  'Anticipo a Aliado': ['Anticipo Alpina DMA', 'Anticipo Cárnicos DMA'],
+  'Gasto': ['Peajes', 'Combustible', 'Robos'],
+  'Anticipo Nómina': ['Anticipo Juan', 'Anticipo Carlos'],
+  'Traslado de Caja': ['Caja Menor DMA', 'TVS QBO', 'Istmina'],
+};
+
 const RecaudoDiario = () => {
   const [showConfirm, setShowConfirm] = useState(false);
-  const [destinos, setDestinos] = useState([
-    { id: '1', tipo: 'Traslado', destino: 'Caja Medellín', valor: 2000000, descripcion: 'Traslado semanal', soporte: true },
-    { id: '2', tipo: 'Anticipo aliado', destino: 'Alpina', valor: 800000, descripcion: 'Anticipo entregas', soporte: false },
-    { id: '3', tipo: 'Dinero cliente', destino: 'Tienda El Roble', valor: 200000, descripcion: 'Devolución cambio', soporte: true },
-  ]);
+  const [destinos, setDestinos] = useState<Destino32[]>(destinosInit32);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addTipo, setAddTipo] = useState<TipoDestino32 | ''>('');
+  const [addDestinoNombre, setAddDestinoNombre] = useState('');
+  const [addValor, setAddValor] = useState(0);
+  const [addDetalle, setAddDetalle] = useState('');
 
   const totalEfectivoPlanillas = cuadresMock.reduce((s, c) => s + c.efectivo, 0);
   const totalDispersado = destinos.reduce((s, d) => s + d.valor, 0);
+
+  const soportes = [...soportesBase];
+  if (destinos.length > 0) {
+    soportes.push({
+      nombre: 'DESTINOS DE EFECTIVO',
+      estado: 'Pendiente',
+      descripcion: 'Soportes de consignaciones, gastos y traslados registrados en la sección de destinos de efectivo.',
+      icono: Upload
+    });
+  }
+  soportes.push({ nombre: 'Arqueo', estado: 'Pendiente' });
 
   return (
     <div className="p-8 animate-fade-in">
@@ -85,40 +121,178 @@ const RecaudoDiario = () => {
 
       {/* 3.2 Destinos de efectivo */}
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-foreground mb-4">3.2 — Destinos de efectivo</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-foreground">3.2 — Destinos de efectivo</h3>
+          <button
+            onClick={() => { setShowAddModal(true); setAddTipo(''); setAddDestinoNombre(''); setAddValor(0); setAddDetalle(''); }}
+            className="flex items-center gap-2 text-sm bg-primary text-primary-foreground hover:opacity-90 px-4 py-2 rounded-md transition-opacity shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> Agregar Destino
+          </button>
+        </div>
+
+        {showAddModal && (
+          <div className="bg-card rounded-lg border border-border p-5 mb-5 shadow-sm animate-fade-in">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-semibold text-foreground">Nuevo Destino de Efectivo</h4>
+              <button onClick={() => setShowAddModal(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">PASO 1 — TIPO DE DESTINO</label>
+                  <select
+                    value={addTipo}
+                    onChange={(e) => { setAddTipo(e.target.value as TipoDestino32); setAddDestinoNombre(''); }}
+                    className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">Seleccione...</option>
+                    <option value="Consignación a Riogrande">Consignación a Riogrande</option>
+                    <option value="Anticipo a Aliado">Anticipo a Aliado</option>
+                    <option value="Gasto">Gasto</option>
+                    <option value="Anticipo Nómina">Anticipo Nómina</option>
+                    <option value="Traslado de Caja">Traslado de Caja</option>
+                  </select>
+                </div>
+
+                {addTipo && (
+                  <div className="animate-fade-in">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">PASO 2 — DESTINO</label>
+                    <select value={addDestinoNombre} onChange={e => setAddDestinoNombre(e.target.value)} className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+                      <option value="">Seleccione...</option>
+                      {parametrosDestinos[addTipo].map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {addTipo === 'Gasto' && addDestinoNombre && (
+                <div className="grid grid-cols-3 gap-3 p-4 bg-muted/30 rounded-md border border-border animate-fade-in">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Proveedor</label>
+                    <div className="flex gap-1">
+                      <input placeholder="Buscar..." className="w-full border border-input rounded px-2 py-1 bg-background text-sm" />
+                      <button className="bg-primary text-primary-foreground px-2 rounded shrink-0"><Plus className="h-3 w-3" /></button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">N° Factura</label>
+                    <input placeholder="OPCIONAL" className="w-full border border-input rounded px-2 py-1 bg-background text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Cuenta analítica</label>
+                    <select className="w-full border border-input rounded px-2 py-1 bg-background text-sm">
+                      <option>DMA-Alpina 100%</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Tarifa IVA</label>
+                    <select className="w-full border border-input rounded px-2 py-1 bg-background text-sm"><option>0%</option><option>5%</option><option>19%</option></select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Retención</label>
+                    <select className="w-full border border-input rounded px-2 py-1 bg-background text-sm"><option>— Sin retención</option></select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Valor base</label>
+                    <input type="number" onChange={e => setAddValor(Number(e.target.value))} className="w-full border border-input rounded px-2 py-1 bg-background text-sm" />
+                  </div>
+                </div>
+              )}
+
+              {addTipo === 'Anticipo Nómina' && addDestinoNombre && (
+                <div className="grid grid-cols-3 gap-3 p-4 bg-muted/30 rounded-md border border-border animate-fade-in">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Empleado</label>
+                    <select className="w-full border border-input rounded px-2 py-1 bg-background text-sm"><option>Juan García</option></select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Concepto</label>
+                    <select className="w-full border border-input rounded px-2 py-1 bg-background text-sm"><option>ANT_NOMINA</option><option>PASAJE</option><option>HURTO_RUTA</option></select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Cuenta analítica</label>
+                    <select className="w-full border border-input rounded px-2 py-1 bg-background text-sm"><option>DMA-Alpina 100%</option></select>
+                  </div>
+                </div>
+              )}
+
+              {addTipo && addDestinoNombre && (
+                <div className="grid grid-cols-2 gap-4 animate-fade-in pt-2">
+                  {(addTipo !== 'Gasto') && (
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">PASO 3 — VALOR</label>
+                      <input
+                        type="text"
+                        value={addValor === 0 ? '' : formatCurrency(addValor)}
+                        onChange={(e) => setAddValor(parseInt(e.target.value.replace(/\D/g, '')) || 0)}
+                        placeholder="$0"
+                        className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary font-mono text-lg"
+                      />
+                    </div>
+                  )}
+                  {['Consignación a Riogrande', 'Traslado de Caja', 'Anticipo a Aliado'].includes(addTipo) && (
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">Detalle / Referencia (Opcional)</label>
+                      <input
+                        type="text"
+                        value={addDetalle}
+                        onChange={(e) => setAddDetalle(e.target.value)}
+                        placeholder="..."
+                        className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end pt-3">
+                <button
+                  disabled={!addTipo || !addDestinoNombre || addValor <= 0}
+                  onClick={() => {
+                    setDestinos([...destinos, { id: String(Date.now()), tipo: addTipo, destinoNombre: addDestinoNombre, detalle: addDetalle || '—', valor: addValor }]);
+                    setShowAddModal(false);
+                  }}
+                  className="bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  Guardar Destino
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-card rounded-lg border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/70">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tipo</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Destino</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Detalle</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Valor</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Descripción</th>
-                <th className="text-center px-4 py-3 font-medium text-muted-foreground">Soporte</th>
+                <th className="text-center px-4 py-3 font-medium text-muted-foreground w-16">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {destinos.map((d) => (
-                <tr key={d.id} className={`border-t border-border table-row-alt ${d.tipo === 'Hurto bodega' ? 'bg-destructive/5' : ''}`}>
-                  <td className="px-4 py-2.5">
-                    <select defaultValue={d.tipo} className="border border-input rounded px-2 py-1 bg-background text-sm">
-                      <option>Traslado</option>
-                      <option>Anticipo aliado</option>
-                      <option>Dinero cliente</option>
-                      <option>Hurto bodega</option>
-                    </select>
-                    {d.tipo === 'Hurto bodega' && <span className="badge-error ml-2">Requiere autorización director</span>}
-                  </td>
-                  <td className="px-4 py-2.5">{d.destino}</td>
+                <tr key={d.id} className="border-t border-border table-row-alt hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-2.5">{d.tipo}</td>
+                  <td className="px-4 py-2.5 font-medium">{d.destinoNombre}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground text-xs">{d.detalle}</td>
                   <td className="px-4 py-2.5 text-right font-mono font-medium">{formatCurrency(d.valor)}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{d.descripcion}</td>
                   <td className="px-4 py-2.5 text-center">
-                    {d.soporte ? <Check className="h-4 w-4 text-success mx-auto" /> : (
-                      <button className="flex items-center gap-1 text-xs text-primary mx-auto"><Paperclip className="h-3.5 w-3.5" /> Adjuntar</button>
-                    )}
+                    <button
+                      onClick={() => setDestinos(destinos.filter(x => x.id !== d.id))}
+                      className="text-destructive hover:bg-destructive/10 rounded p-1.5 transition-colors inline-block"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
+              {destinos.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No hay destinos registrados.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -152,20 +326,29 @@ const RecaudoDiario = () => {
 
       {/* 3.4 Soportes */}
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-foreground mb-4">3.4 — Soportes</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">3.4 — Soportes del día</h3>
         <div className="bg-card rounded-lg border border-border divide-y divide-border">
-          {soportesMock.map((s, i) => (
-            <div key={i} className="flex items-center justify-between px-6 py-4">
-              <span className="text-sm font-medium">{s.nombre}</span>
-              {s.estado === 'Adjunto' ? (
-                <span className="badge-success">Adjunto ✓</span>
-              ) : (
-                <button className="flex items-center gap-2 text-sm text-primary hover:bg-accent px-3 py-1.5 rounded-md">
-                  <Paperclip className="h-4 w-4" /> Adjuntar
-                </button>
-              )}
-            </div>
-          ))}
+          {soportes.map((s, i) => {
+            const Icon = s.icono;
+            return (
+              <div key={i} className="flex items-center justify-between px-6 py-4">
+                <div className="flex gap-4 items-center">
+                  {Icon && <div className="bg-primary/10 p-2 rounded-md"><Icon className="h-5 w-5 text-primary" /></div>}
+                  <div>
+                    <span className="text-sm font-medium block">{s.nombre}</span>
+                    {s.descripcion && <span className="text-xs text-muted-foreground mt-0.5 block max-w-lg">{s.descripcion}</span>}
+                  </div>
+                </div>
+                {s.estado === 'Adjunto' ? (
+                  <span className="badge-success whitespace-nowrap">Adjunto ✓</span>
+                ) : (
+                  <button className="flex items-center gap-2 text-sm text-primary hover:bg-accent px-3 py-1.5 rounded-md whitespace-nowrap shrink-0">
+                    <Paperclip className="h-4 w-4" /> Adjuntar
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 

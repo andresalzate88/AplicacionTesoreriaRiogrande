@@ -1,0 +1,455 @@
+# Plan de Implementación — RioTesorería v6
+**Basado en:** DocumentoMaestroAPlicacionTesoreriaV6.md (2026-04-23)  
+**Stack:** React + Vite + TypeScript + Tailwind + Supabase (PostgreSQL)  
+**Estado actual:** UI prototipo completo con datos mock. Sin conexión a base de datos real.
+
+---
+
+## Resumen del estado actual
+
+| Módulo | Estado actual |
+|--------|--------------|
+| Login / Autenticación | Mock (Zustand sin auth real) |
+| Inicio del Día | UI completa — datos mock estáticos |
+| Estado de Planillas | UI completa — datos mock |
+| Cuadre de Planillas | UI completa (7 secciones) — datos mock |
+| Recaudo Diario | UI completa — datos mock |
+| Revisión Analista | UI completa — datos mock |
+| Conciliación Alpina | UI completa — datos mock |
+| Informes | UI completa (10 tabs) — datos mock |
+| Parametrización | UI completa — datos mock |
+| Base de datos Supabase | **NO ejecutado** — SQL V6 pendiente |
+| Capa de servicio | **No existe** |
+| Roles y permisos | **No existe** |
+| Vista 05 - Sync Odoo | **No existe** |
+| Informes V6 nuevos | **No existe** (Plano ERP, Estado ERP, Conciliación DIAN, Docs Odoo, Asientos) |
+
+---
+
+## Cambios V5 → V6 que impactan la implementación
+
+> [!IMPORTANT]
+> Los siguientes cambios del V6 requieren trabajo nuevo o modificaciones a lo ya construido:
+
+| Elemento V6 nuevo | Impacto |
+|-------------------|---------|
+| Tabla `clientes` (nueva) | Cuadre §2.1 y §retenciones deben usar FK `cliente_id` |
+| Tabla `proveedores` (nueva) | Cuadre §2.2 gastos usa `proveedor_id` en lugar de NIT libre |
+| Tabla `documentos_dian` (nueva) | Nuevo flujo de cruce DIAN + trigger automático |
+| `parametros_contables` renombra campos | `cuenta_contable` → `cuenta_contable_debito` + `cuenta_contable_credito` |
+| 4 parámetros nuevos en `parametros_sistema` | INGESTA_MANUAL_ACTIVA, INGESTA_AUTOMATICA_ACTIVA, SYNC_ODOO_MANUAL_ACTIVA, SYNC_ODOO_AUTOMATICA_ACTIVA |
+| 3 históricas nuevas | `hist_clientes`, `hist_proveedores`, `hist_documentos_dian` |
+| Vista 05 — Sync Odoo (nueva) | Página completamente nueva, 4 bloques secuenciales |
+| Asientos tipos 8 y 9 | `ANTICIPO_CLIENTE` y `DESCUENTO_ANTICIPO_CLIENTE` en `generar_asientos()` |
+| 5 informes nuevos | Plano ERP, Estado ERP, Conciliación ERP vs DIAN, Docs listos Odoo, Asientos |
+| `error_sync` en `asientos_contables` | Campo nuevo para errores Odoo |
+
+---
+
+## Fases de implementación
+
+---
+
+### FASE 1 — Base de datos Supabase (39 tablas + funciones)
+*Prerequisito para todo lo demás*
+
+> [!CAUTION]
+> El SQL V6 en `Docs/SQLv6 Tesoreria Riogrande.txt` es el script completo. Debe ejecutarse COMPLETO en el SQL editor de Supabase en el orden definido. No ejecutar parcialmente.
+
+**Pasos:**
+1. Abrir Supabase SQL Editor
+2. Ejecutar el script completo `SQLv6 Tesoreria Riogrande.txt` (1422 líneas)
+3. Verificar las 39 tablas creadas
+4. Verificar las 9 funciones SQL
+5. Verificar los 12 triggers
+6. Verificar datos iniciales (sedes, operaciones, consecutivos, parámetros sistema)
+7. Habilitar Row Level Security (RLS) en tablas sensibles
+8. Crear las policies de RLS por rol
+
+**Policies RLS mínimas:**
+- `sedes`, `operaciones`, `bancos`: lectura pública (todos los roles autenticados)
+- `parametros_sistema`: solo admin puede modificar
+- `cuadres`, `recaudos_dia`: auxiliar ve solo su sede
+- `audit_log`: solo lectura analista/director/admin
+
+---
+
+### FASE 2 — Capa de servicio TypeScript + Supabase Client
+*Crear la infraestructura de datos*
+
+#### [NEW] `src/lib/supabase.ts`
+Cliente Supabase con URL y anon key desde `.env`.
+
+#### [NEW] `src/types/database.ts`
+Tipos TypeScript generados desde el schema V6. Incluye todos los tipos de las 39 tablas con sus campos exactos del SQL V6:
+- `Sede`, `Operacion`, `Banco`, `CuentaAnalitica`
+- `ParametroContable`, `ParametroSistema`, `Empleado`, `Vehiculo`
+- `Cliente`, `Proveedor`
+- `DocumentoErp`, `DocumentoDian`, `ConsignacionBanco`, `ConsignacionAliado`
+- `Cuadre`, `CuadreRetencion`, `Gasto`, `CuadreAnticipoNomina`
+- `RecaudoDia`, `DestinoEfectivo`, `SoporteDia`, `ChecklistRevision`
+- `AsientoContable`, `AuditLog`
+
+#### [NEW] `src/services/` (directorio)
+Un archivo por dominio:
+
+| Archivo | Funciones |
+|---------|-----------|
+| `sedeService.ts` | `getSedes()`, `getOperacionesBySede()` |
+| `planillaService.ts` | `getPlanillasCerradas(sedeId, fecha)` |
+| `cuadreService.ts` | `crearCuadre()`, `confirmarCuadre()`, `anularCuadre()` |
+| `recaudoService.ts` | `getOCrearRecaudo()`, `cerrarRecaudo()`, `aprobarRecaudo()` |
+| `consignacionService.ts` | `getConsigDisponibles()`, `bloquearConsig()`, `liberarConsig()` |
+| `documentoErpService.ts` | `getDocumentosByPlanilla()`, `getClienteById()` |
+| `parametroService.ts` | `getParametrosContables()`, `getParametroSistema()` |
+| `asientoService.ts` | `getAsientosPendientes()`, `marcarEnviado()` |
+| `syncOdooService.ts` | `getClientesPendientes()`, `getProveedoresPendientes()`, `getAsientosPendientes()` |
+| `informeService.ts` | Queries para los 10 informes |
+
+#### [MODIFY] `src/store/appStore.ts`
+Agregar al estado:
+- `userRole: 'auxiliar' | 'analista' | 'director' | 'admin' | 'contabilidad'`
+- `sedeId: string` (UUID de la sede activa)
+- `userId: string`
+- `userEmail: string`
+
+---
+
+### FASE 3 — Autenticación y roles con Supabase Auth
+*Reemplazar el mock de login*
+
+#### [MODIFY] `src/pages/LoginPage.tsx`
+- Conectar con `supabase.auth.signInWithPassword()`
+- Leer el rol del usuario desde `auth.users` metadata o tabla custom `user_roles`
+- Redirigir al `currentPage` correcto según el rol
+
+#### [MODIFY] `src/store/appStore.ts`
+- `login()` → llamada real a Supabase Auth
+- `logout()` → `supabase.auth.signOut()`
+- Persistir sesión con `supabase.auth.onAuthStateChange()`
+
+#### [MODIFY] `src/components/AppSidebar.tsx`
+- Mostrar/ocultar ítems de menú según rol:
+  - Auxiliar: NO ve "Revisión", NO ve "Sync Odoo", NO ve "Conciliación Alpina"
+  - Analista: Ve todo excepto "Parametrización" y "Sync Odoo"
+  - Admin: Ve todo
+  - Contabilidad: Solo "Inicio del Día", "Sync Odoo", "Informes"
+
+#### [NEW] `src/components/AppSidebar.tsx` — menú Sync Odoo
+Agregar ítem `{ id: 'sync-odoo', label: 'Sincronización Odoo', icon: RefreshCw }` visible solo para Admin y Contabilidad.
+
+---
+
+### FASE 4 — Vista 01: Inicio del Día (conectar a BD)
+*Actualmente: UI estática. Meta: datos reales*
+
+#### [MODIFY] `src/pages/InicioDia.tsx`
+
+**Sección A — Sincronización de fuentes:**
+- Leer estado de sync desde `parametros_sistema` (INGESTA_MANUAL_ACTIVA, INGESTA_AUTOMATICA_ACTIVA)
+- Botón "Sincronizar" llama a función Supabase Edge Function o webhook que procesa los archivos de SharePoint
+- Mostrar último `leido_sharepoint_at` de `documentos_erp` como timestamp real
+
+**Sección B — Alertas activas:**
+- Query real: sedes con `recaudos_dia.estado = 'CERRADO_AUXILIAR'` hace más de N días (leer MAX_DIAS_SIN_APROBAR)
+- Consignaciones con `estado_cuadre = 'BLOQUEADA'` y `bloqueada_at` antigua
+- Planillas `estado_planilla_erp = 'CERRADA'` sin cuadre
+
+**Sección C — Estado del día por sede:**
+- Query real por sede: último `recaudos_dia` de hoy, `nuevo_saldo` calculado, conteo de cuadres
+
+**Hook recomendado:** `src/hooks/useInicioDia.ts`
+
+---
+
+### FASE 5 — Vista 02: Cuadre de Planillas (conectar a BD)
+*Actualmente: datos mock. Meta: datos reales con bloqueo de consignaciones*
+
+#### [MODIFY] `src/pages/CuadrePlanillas.tsx`
+
+**Sección Tripulación:**
+- Dropdown **conductor** desde `empleados` filtrado por `sede_id` y `cargo = 'CONDUCTOR'`
+- Dropdown **auxiliar_1**, **auxiliar_2** desde `empleados` de la misma sede
+- Dropdown **vehículo** desde `vehiculos` filtrado por `sede_id`
+
+**Sección 2.1 — Liquidación planillas:**
+- Cargar `documentos_erp` donde `operacion_planilla` IN (planillas seleccionadas) y `estado_planilla_erp = 'CERRADA'`
+- `cliente` viene de JOIN con `clientes` usando `cliente_id`
+- Descuentos condicionados sin `factura_referencia`: dropdown que filtra facturas del mismo NIT en `documentos_erp`
+- Retenciones: usar `parametros_contables` tipo `RETENCION_CLIENTE`
+
+**Sección 2.2 — Gastos de ruta:**
+- Tipo de gasto: dropdown `parametros_contables` (tipo=GASTO, sede_id=actual)
+- Proveedor: búsqueda en tabla `proveedores` + botón "+" para crear nuevo
+- Doc. electrónico: visible si `requiere_documento_electronico = true` en parámetro
+- Cuenta analítica: dropdown `cuentas_analiticas` de la sede
+- Tarifa IVA: dropdown `parametros_contables` tipo `IVA_DESCONTABLE`
+- Retención proveedor: dropdown `parametros_contables` tipo `RETENCION_PROVEEDOR`
+- Alerta si `valor_base > tope_maximo` del parámetro
+
+**Sección 2.3 — Consignaciones Riogrande:**
+- Cargar de `consignaciones_banco` donde `sede_id=actual`, `estado_cuadre IN ('LIBRE','BLOQUEADA')`, fecha en rango (MARGEN_DIAS_ANTES, MARGEN_DIAS_DESPUES)
+- Filtro banco: solo tipo `RIOGRANDE`
+- Al seleccionar → UPDATE `estado_cuadre = 'BLOQUEADA'`, `bloqueada_por`, `bloqueada_at`
+- Al quitar → UPDATE `estado_cuadre = 'LIBRE'`
+
+**Sección 2.4 — Consignaciones Aliados:**
+- Cárnicos/Nutresa/Meals: cargar de `consignaciones_aliados` donde `aliado=X`, `estado_certificacion='CERTIFICADA'`, `estado_cuadre='LIBRE'`
+- Alpina: INSERT libre en `consignaciones_aliados` con `estado_certificacion='SIN_CERTIFICAR'`, dropdown banco tipo `EXTERNO`
+
+**Sección 2.5 — Anticipos de clientes:**
+- Cargar `documentos_erp` tipo `ANTICIPO` de las planillas seleccionadas
+
+**Sección 2.6 — Anticipos nómina:**
+- Dropdown empleados de la sede
+- Concepto: ANT_NOMINA / PASAJE / HURTO_RUTA
+- HURTO_RUTA → `estado_autorizacion = 'PENDIENTE'`
+
+**Sección 2.7 — Resumen y confirmación:**
+- Botón "Confirmar cuadre" → llama `generar_consecutivo_cuadre(sede_id, fecha)` en Supabase RPC
+- INSERT en `cuadres` con todos los datos + consecutivo generado
+- UPDATE `documentos_erp.estado_at = 'EN_CUADRE'` para las planillas usadas
+- UPDATE `consignaciones_banco.estado_cuadre = 'EN_CUADRE'` para las seleccionadas
+
+**Hook recomendado:** `src/hooks/useCuadrePlanillas.ts`
+
+---
+
+### FASE 6 — Vistas 03 y 04: Recaudo y Revisión (conectar a BD)
+
+#### [MODIFY] `src/pages/RecaudoDiario.tsx`
+
+**Sección 3.1 — Resumen del día:**
+- Query: todos los cuadres del `recaudo_id` activo → sumar efectivo total
+- `saldo_anterior` desde `get_saldo_anterior(sede_id, fecha)` RPC de Supabase
+- Cards con totales calculados reales
+
+**Sección 3.2 — Destinos de efectivo (flujo cascada):**
+- Tipo → dropdown de tipos: CONSIGNACION_RG / CONSIGNACION_ALIADO / GASTO / ANTICIPO_NOMINA / TRASLADO_EFECTIVO
+- Destino → SELECT de `parametros_contables` filtrado por tipo + sede
+- Según tipo, el sistema crea registro en la tabla correspondiente (no solo en `destinos_efectivo`)
+- Cuenta analítica para GASTO y ANTICIPO_NOMINA
+
+**Sección 3.3 — Saldo de caja:**
+- `nuevo_saldo` = columna GENERATED en la BD, solo leer
+
+**Sección 3.4 — Soportes del día:**
+- Detectar dinámicamente qué tipos aplican según lo registrado
+- Upload a Supabase Storage con nomenclatura `DMA_20260419_RETENCIONES_DMA-RD-190426.pdf`
+- INSERT en `soportes_dia`
+
+**Botón "Cerrar día":**
+- Validar que auxiliar no tenga recaudo anterior sin cerrar
+- Validar `validar_dias_sin_aprobar(sede_id)` RPC
+- UPDATE `recaudos_dia.estado = 'CERRADO_AUXILIAR'`
+
+#### [MODIFY] `src/pages/Revision.tsx`
+
+**Checklist 11 ítems:**
+- Cargar `checklist_revision` del recaudo seleccionado
+- `aplica` calculado automáticamente: verificar si existen registros del tipo en el día
+- Cada ítem: estado OK / CON_OBSERVACION / FALTANTE / NO_APLICA
+- Nota obligatoria si no es OK
+
+**Botón "Aprobar":**
+1. UPDATE todos los ítems del checklist
+2. UPDATE `recaudos_dia.estado = 'APROBADO'`
+3. Llamar RPC `promover_a_historico(recaudo_id)`
+4. Llamar RPC `generar_asientos(recaudo_id)`
+
+**Botón "Devolver":**
+- UPDATE `recaudos_dia.estado = 'DEVUELTO'`, `nota_devolucion` obligatoria
+
+---
+
+### FASE 7 — Vista 05: Sincronización Odoo (nueva página)
+
+> [!IMPORTANT]
+> Esta vista es completamente nueva y no existe aún en el código.
+
+#### [NEW] `src/pages/SyncOdoo.tsx`
+
+Solo visible para roles: `admin` y `contabilidad`.
+
+**4 bloques secuenciales:**
+
+**Bloque 1 — Clientes pendientes:**
+- Query: `clientes` donde `sincronizado_odoo = false` OR `requiere_sync_odoo = true`
+- Tabla con NIT, nombre, tipo, estado sync
+- Botón "Sincronizar clientes" → llama Edge Function que envía a API Odoo
+- Badge por cliente: PENDIENTE / SINCRONIZADO / ERROR
+- Bloque 2 se habilita cuando todos estén SINCRONIZADO
+
+**Bloque 2 — Documentos ERP:**
+- Query: `hist_documentos_erp` con `estado_at = 'APROBADO'` AND `estado_dian = 'APROBADO_CON_NOTIFICACION'`
+- Solo habilitado cuando Bloque 1 completo
+- Botón "Sincronizar documentos"
+
+**Bloque 3 — Proveedores pendientes:**
+- Puede correr en paralelo con Bloque 1
+- Query: `proveedores` donde `sincronizado_odoo = false` OR `requiere_sync_odoo = true`
+- Botón "Sincronizar proveedores"
+
+**Bloque 4 — Asientos contables:**
+- Query: `asientos_contables` donde `estado_odoo = 'PENDIENTE'`
+- Muestra `error_sync` si Odoo rechazó (badge ERROR en rojo)
+- Solo habilitado cuando Bloques 1, 2 y 3 completos
+- Habilitadores: leer `SYNC_ODOO_MANUAL_ACTIVA` de `parametros_sistema`
+
+#### [MODIFY] `src/components/AppSidebar.tsx`
+Agregar ítem Sync Odoo al menú, visible solo para admin y contabilidad.
+
+#### [MODIFY] `src/components/AppLayout.tsx`
+Registrar la nueva página `sync-odoo`.
+
+---
+
+### FASE 8 — Informes V6: 5 informes nuevos
+
+> [!IMPORTANT]
+> Los informes existentes (tabs 0-9) quedan para versiones anteriores. El V6 requiere 5 nuevos informes específicos para operaciones con DIAN y Odoo.
+
+#### [MODIFY] `src/pages/Informes.tsx`
+
+Agregar 5 tabs nuevos al final de la lista actual:
+
+| # Tab | Nombre | Fuente | Filtros |
+|-------|--------|--------|---------|
+| 10 | Plano Documentos ERP | `hist_documentos_erp` + `clientes` | Sede, Operación, Rango fechas, Tipo, CR/CO, Estado AT, Estado DIAN |
+| 11 | Estado Documentos ERP | `hist_documentos_erp` | Sede, Operación, Rango fechas, Tipo, Estado AT, Estado DIAN |
+| 12 | Conciliación ERP vs DIAN | `hist_documentos_erp` vs `documentos_dian` | Sede, Operación, Rango fechas — descarga Excel 2 pestañas |
+| 13 | Documentos listos para Odoo | `hist_documentos_erp` | Filtro fijo: APROBADO + APROBADO_CON_NOTIFICACION |
+| 14 | Asientos Contables | `asientos_contables` | Sede, Rango fechas, Tipo, Estado Odoo |
+
+**Badge estado Odoo** (informe 14): PENDIENTE (gris) / ENVIADO (azul) / CONFIRMADO (verde) / ERROR (rojo)
+
+---
+
+### FASE 9 — Parametrización (conectar a BD)
+
+#### [MODIFY] `src/pages/Parametrizacion.tsx`
+
+Conectar todos los formularios a Supabase:
+- **Sedes**: lectura de `sedes` (4 registros fijos)
+- **Bancos**: CRUD completo en `bancos`
+- **Empleados**: CRUD completo en `empleados` (desactivar, no borrar)
+- **Vehículos**: CRUD completo en `vehiculos`
+- **Clientes**: solo lectura (se alimentan del ERP), vista de estado sync Odoo
+- **Proveedores**: CRUD completo en `proveedores` (admin pre-carga)
+- **Parámetros contables**: CRUD completo por sede y tipo
+- **Cuentas analíticas**: CRUD completo
+- **Parámetros sistema**: edición de los 13 parámetros configurables
+
+---
+
+## Estructura final de archivos
+
+```
+src/
+├── lib/
+│   ├── supabase.ts          [NEW] Cliente Supabase
+│   ├── utils.ts
+│   └── format.ts
+├── types/
+│   └── database.ts          [NEW] Tipos TS del schema V6
+├── services/
+│   ├── sedeService.ts       [NEW]
+│   ├── planillaService.ts   [NEW]
+│   ├── cuadreService.ts     [NEW]
+│   ├── recaudoService.ts    [NEW]
+│   ├── consignacionService.ts [NEW]
+│   ├── documentoErpService.ts [NEW]
+│   ├── parametroService.ts  [NEW]
+│   ├── asientoService.ts    [NEW]
+│   ├── syncOdooService.ts   [NEW]
+│   └── informeService.ts    [NEW]
+├── hooks/
+│   ├── use-mobile.tsx
+│   ├── use-toast.ts
+│   ├── useInicioDia.ts      [NEW]
+│   ├── useCuadrePlanillas.ts [NEW]
+│   └── useRecaudo.ts        [NEW]
+├── store/
+│   └── appStore.ts          [MODIFY] + roles, sedeId, userId
+├── components/
+│   ├── AppLayout.tsx        [MODIFY] + SyncOdoo route
+│   ├── AppSidebar.tsx       [MODIFY] + role-based menu
+│   └── ui/
+├── pages/
+│   ├── LoginPage.tsx        [MODIFY] Supabase Auth
+│   ├── InicioDia.tsx        [MODIFY] datos reales
+│   ├── EstadoPlanillas.tsx  [MODIFY] datos reales
+│   ├── CuadrePlanillas.tsx  [MODIFY] datos reales
+│   ├── RecaudoDiario.tsx    [MODIFY] datos reales
+│   ├── Revision.tsx         [MODIFY] datos reales + RPCs
+│   ├── ConciliacionAlpina.tsx [MODIFY] datos reales
+│   ├── SyncOdoo.tsx         [NEW] Vista 05 completa
+│   ├── Informes.tsx         [MODIFY] + 5 tabs V6
+│   └── Parametrizacion.tsx  [MODIFY] datos reales
+└── data/
+    └── mockData.ts          (se irá eliminando fase a fase)
+```
+
+---
+
+## Orden de ejecución recomendado
+
+```mermaid
+graph TD
+  F1[FASE 1: SQL Supabase] --> F2[FASE 2: Supabase Client + Tipos + Servicios]
+  F2 --> F3[FASE 3: Auth + Roles]
+  F3 --> F4[FASE 4: Inicio del Día]
+  F3 --> F5[FASE 5: Cuadre Planillas]
+  F5 --> F6[FASE 6: Recaudo + Revisión]
+  F6 --> F7[FASE 7: Sync Odoo]
+  F6 --> F8[FASE 8: Informes V6]
+  F3 --> F9[FASE 9: Parametrización]
+```
+
+---
+
+## Plan de verificación
+
+### Fase 1 — BD
+- [ ] `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'` = 39
+- [ ] Verificar funciones con `SELECT routine_name FROM information_schema.routines`
+- [ ] Insertar un recaudo de prueba y verificar `promover_a_historico()`
+
+### Fase 2-3 — Auth
+- [ ] Login con usuario auxiliar → ver solo menú restringido
+- [ ] Login con admin → ver todo el menú
+- [ ] Logout limpia sesión
+
+### Fase 5 — Cuadre
+- [ ] Seleccionar planilla → cargar documentos ERP reales
+- [ ] Seleccionar consignación banco → queda BLOQUEADA en BD
+- [ ] Confirmar cuadre → consecutivo DMA-DDMMYY.NN generado correctamente
+
+### Fase 6 — Recaudo
+- [ ] Aprobar recaudo → ejecuta `promover_a_historico()` y `generar_asientos()`
+- [ ] Verificar que aparecen filas en `hist_recaudos_dia` y `asientos_contables`
+
+### Fase 7 — Sync Odoo
+- [ ] Bloque 1 se habilita, Bloque 2 bloqueado hasta completar Bloque 1
+- [ ] Error Odoo → aparece en `error_sync` con badge rojo
+
+---
+
+## Puntos pendientes de definir (del documento maestro)
+
+> [!WARNING]
+> Los siguientes puntos están documentados como "pendientes con implementador Odoo 19" y NO deben implementarse hasta tener respuesta:
+
+1. Endpoints REST de Odoo para facturas, notas y asientos
+2. Cómo envía Odoo las retenciones de clientes
+3. Cruce de retenciones con facturas en cartera
+4. Recibo de caja automático para facturas CONTADO
+5. Manejo de anticipos de clientes en Odoo
+6. Qué diario de Odoo corresponde a cada tipo de asiento
+7. Cómo confirma Odoo la recepción (para actualizar `estado_odoo = CONFIRMADO`)
+
+Por ahora, la Vista 05 (Sync Odoo) debe construirse con botones que disparen Edge Functions stub — la lógica real de API se conectará cuando el implementador de Odoo entregue las especificaciones.
+
+---
+
+*Plan generado: 2026-04-23 · Distribuciones Riogrande · RioTesorería v6*

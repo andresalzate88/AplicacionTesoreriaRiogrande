@@ -1,4 +1,4 @@
-import { ClipboardList, Scale, CalendarDays, CheckSquare, BarChart3, Settings, LogOut, Flag, Link } from 'lucide-react';
+import { ClipboardList, Scale, CalendarDays, CheckSquare, BarChart3, Settings, LogOut, Flag, Link, RefreshCw } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 
 const menuItems = [
@@ -8,6 +8,7 @@ const menuItems = [
   { id: 'recaudo', label: 'Recaudo Diario', icon: CalendarDays },
   { id: 'revision', label: 'Revisión', icon: CheckSquare },
   { id: 'conciliacion-alpina', label: 'Conciliación Alpina', icon: Link },
+  { id: 'sincronizacion-odoo', label: 'Sincronización Odoo', icon: RefreshCw },
   { id: 'informes', label: 'Informes', icon: BarChart3 },
   { id: 'parametrizacion', label: 'Parametrización', icon: Settings },
 ];

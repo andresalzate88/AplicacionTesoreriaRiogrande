@@ -1,0 +1,1422 @@
+-- ============================================================
+-- SQL COMPLETO v6 — Plataforma Tesorería · Distribuciones Riogrande
+-- Base de datos: PostgreSQL / Supabase
+-- Fecha: 2026-04-23
+-- Total tablas: 39
+-- ============================================================
+-- ORDEN DE CREACIÓN:
+-- 1. Extensiones
+-- 2. Tablas maestras y parámetros
+-- 3. Tablas maestras de terceros (clientes, proveedores)
+-- 4. Tablas de ingesta (ERP, DIAN, bancos, aliados)
+-- 5. Tablas operativas (cuadre)
+-- 6. Tablas operativas (recaudo y revisión)
+-- 7. Asientos contables
+-- 8. Tablas históricas
+-- 9. Audit log
+-- 10. Índices
+-- 11. Funciones
+-- 12. Triggers
+-- 13. Datos iniciales
+-- ============================================================
+
+-- ============================================================
+-- 1. EXTENSIONES
+-- ============================================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- ============================================================
+-- 2. TABLAS MAESTRAS Y PARÁMETROS
+-- ============================================================
+
+CREATE TABLE sedes (
+    id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    codigo       text        UNIQUE NOT NULL,  -- DMA / CAC / APA / QBO
+    nombre       text        NOT NULL,
+    letra        text        UNIQUE NOT NULL,  -- D / C / A / Q
+    cuenta_caja  text        NOT NULL,         -- Cuenta contable caja (ej: 130501)
+    activa       boolean     NOT NULL DEFAULT true,
+    created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE operaciones (
+    id           uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+    codigo       text    UNIQUE NOT NULL,  -- DA, DC, DF, CA, CC, CN, AA, QC, QN, QM
+    sede_id      uuid    NOT NULL REFERENCES sedes(id),
+    aliado       text    NOT NULL,         -- ALPINA / CARNICOS / FAMILIA / NUTRESA / MEALS
+    letra_aliado text    NOT NULL,         -- A / C / F / N / M
+    tipo_erp     text    NOT NULL,         -- SIDIS / ECOM
+    activa       boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE bancos (
+    id      integer PRIMARY KEY,           -- ID numérico — se usa en Excel de ingesta
+    nombre  text    UNIQUE NOT NULL,
+    tipo    text    NOT NULL,              -- RIOGRANDE / EXTERNO
+    activo  boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE cuentas_analiticas (
+    id           uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+    sede_id      uuid    NOT NULL REFERENCES sedes(id),
+    operacion_id uuid    REFERENCES operaciones(id),  -- Nullable si es combinación
+    codigo_odoo  text    NOT NULL,  -- JSON: {"7":100} / {"7":50,"8":50}
+    nombre       text    NOT NULL,  -- "DMA-Alpina 100%"
+    activo       boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE parametros_contables (
+    id                             uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+    sede_id                        uuid    REFERENCES sedes(id),  -- NULL = todas las sedes
+    tipo                           text    NOT NULL,
+    -- RETENCION_CLIENTE / RETENCION_PROVEEDOR / GASTO / CONSIGNACION_RG /
+    -- CONSIGNACION_ALIADO / ANTICIPO_NOMINA / APROVECHAMIENTO /
+    -- TRASLADO_EFECTIVO / IVA_DESCONTABLE /
+    -- ANTICIPO_CLIENTE / DESCUENTO_ANTICIPO_CLIENTE
+    nombre_asiento                 text    NOT NULL,
+    cuenta_contable_debito         text    NOT NULL,
+    cuenta_contable_credito        text,              -- NULL = usar sedes.cuenta_caja
+    cuenta_analitica               text,              -- Solo CONSIGNACION_ALIADO y APROVECHAMIENTO
+    diario_odoo                    text,              -- Nullable — pendiente con contador
+    nit_tercero                    text,              -- Nullable para gastos y retenciones
+    nombre_tercero                 text,
+    banco_id                       integer REFERENCES bancos(id),  -- Solo CONSIGNACION_RG
+    requiere_documento_electronico boolean DEFAULT false,           -- Solo GASTO
+    tope_maximo                    numeric,                         -- Solo GASTO
+    tarifa_iva                     numeric,                         -- Solo IVA_DESCONTABLE: 5 o 19
+    activo                         boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE parametros_sistema (
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    clave       text        UNIQUE NOT NULL,
+    -- MARGEN_DIAS_ANTES / MARGEN_DIAS_DESPUES / TIMEOUT_SESION_MINUTOS /
+    -- HORA_SYNC_AUTOMATICA / MAX_DIAS_SIN_APROBAR /
+    -- RUTA_SOPORTES_DMA / RUTA_SOPORTES_CAC / RUTA_SOPORTES_APA / RUTA_SOPORTES_QBO /
+    -- INGESTA_MANUAL_ACTIVA / INGESTA_AUTOMATICA_ACTIVA /
+    -- SYNC_ODOO_MANUAL_ACTIVA / SYNC_ODOO_AUTOMATICA_ACTIVA
+    valor       text        NOT NULL,
+    descripcion text,
+    updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE empleados (
+    id              uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+    nit             text    UNIQUE NOT NULL,
+    nombre_completo text    NOT NULL,
+    sede_id         uuid    NOT NULL REFERENCES sedes(id),
+    cargo           text    NOT NULL,
+    activo          boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE vehiculos (
+    id      uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+    placa   text    UNIQUE NOT NULL,
+    tipo    text    NOT NULL,  -- CAMION / FURGON / MOTO / OTRO
+    sede_id uuid    NOT NULL REFERENCES sedes(id),
+    activo  boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE consecutivos_cuadre (
+    sede_id       uuid    PRIMARY KEY REFERENCES sedes(id),
+    fecha         date    NOT NULL,
+    ultimo_numero integer NOT NULL DEFAULT 0
+);
+
+-- ============================================================
+-- 3. TABLAS MAESTRAS DE TERCEROS
+-- ============================================================
+
+CREATE TABLE clientes (
+    id                       uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    operacion_codigo_cliente text        UNIQUE NOT NULL,  -- DA-1 — ID externo en Odoo
+    operacion_id             uuid        NOT NULL REFERENCES operaciones(id),
+    numero_identificacion    text        NOT NULL,
+    digito_verificacion      text,
+    tipo_tercero             text,       -- Natural / Jurídico
+    tipo_identificacion      text,       -- cedula, nit, etc.
+    nombre_establecimiento   text,       -- Nombre de la tienda
+    nombre_completo          text,
+    nombre1                  text,
+    nombre2                  text,
+    apellido1                text,
+    apellido2                text,
+    pais                     text,
+    departamento             text,
+    municipio                text,
+    zip                      text,
+    direccion                text,
+    correo                   text,
+    telefono                 text,
+    sincronizado_odoo        boolean     NOT NULL DEFAULT false,
+    sincronizado_at          timestamptz,
+    requiere_sync_odoo       boolean     NOT NULL DEFAULT false,
+    error_sync               text,
+    activo                   boolean     NOT NULL DEFAULT true,
+    updated_at               timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE proveedores (
+    id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    nit                   text        UNIQUE NOT NULL,
+    digito_verificacion   text,
+    nombre                text        NOT NULL,
+    tipo_identificacion   text,
+    tipo_tercero          text,       -- Natural / Jurídico
+    sincronizado_odoo     boolean     NOT NULL DEFAULT false,
+    sincronizado_at       timestamptz,
+    requiere_sync_odoo    boolean     NOT NULL DEFAULT false,
+    error_sync            text,
+    creado_por            uuid,       -- → auth.users. Nullable si fue pre-cargado.
+    activo                boolean     NOT NULL DEFAULT true,
+    updated_at            timestamptz NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- 4. TABLAS DE INGESTA
+-- ============================================================
+
+CREATE TABLE documentos_erp (
+    id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    operacion_id          uuid        NOT NULL REFERENCES operaciones(id),
+    cliente_id            uuid        REFERENCES clientes(id),
+    operacion_planilla    text        NOT NULL,   -- DA-32825
+    estado_planilla_erp   text        NOT NULL,   -- CERRADA / ABIERTA
+    tipo_documento        text        NOT NULL,   -- FACTURA DE VENTA / NOTA CREDITO / NOTA DEBITO / ANTICIPO
+    sub_tipo              text,
+    documento_electronico text,                   -- Clave de cruce con documentos_dian
+    operacion_documento   text        UNIQUE NOT NULL,  -- Clave única de upsert
+    factura_referencia    text,
+    cr_co                 text        NOT NULL,   -- CONTADO / CREDITO
+    fecha_emision         date        NOT NULL,
+    fecha_vencimiento     date,
+    producto              text,
+    cantidad              numeric,
+    valor_sin_iva         numeric     NOT NULL DEFAULT 0,
+    iva                   numeric     NOT NULL DEFAULT 0,
+    valor_base_iva        numeric     GENERATED ALWAYS AS (valor_sin_iva + iva) STORED,
+    cuenta_contable       text,                   -- Del plano ERP
+    cuenta_analitica      text,                   -- Del plano ERP
+    diario_odoo           text,                   -- Del plano ERP
+    estado_dian           text        NOT NULL DEFAULT 'SIN_VALIDAR',
+    -- SIN_VALIDAR / APROBADO_CON_NOTIFICACION / RECHAZADO / PENDIENTE
+    validado_dian_at      timestamptz,
+    estado_at             text        NOT NULL DEFAULT 'PENDIENTE',
+    -- PENDIENTE / EN_CUADRE / ENVIADO_REVISION / APROBADO
+    numero_cuadre         text,                   -- → cuadres.consecutivo
+    recaudo_id            uuid,                   -- → recaudos_dia
+    hash_archivo          text,
+    leido_sharepoint_at   timestamptz,
+    updated_at            timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE documentos_dian (
+    id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    operacion_id          uuid        REFERENCES operaciones(id),
+    prefijo               text,
+    folio                 text,
+    documento_electronico text        UNIQUE NOT NULL,  -- prefijo + folio
+    fecha_emision         date,
+    base                  numeric,    -- total - iva
+    iva                   numeric,
+    total                 numeric,
+    tipo_documento        text,       -- ELECTRONICO / FACTURA / NOTA_CREDITO / NOTA_DEBITO
+    estado_dian           text        NOT NULL DEFAULT 'PENDIENTE',
+    -- APROBADO_CON_NOTIFICACION / RECHAZADO / PENDIENTE
+    leido_at              timestamptz NOT NULL DEFAULT now(),
+    updated_at            timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE consignaciones_banco (
+    id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    sede_id             uuid        REFERENCES sedes(id),
+    operacion_id        uuid        REFERENCES operaciones(id),
+    banco_id            integer     NOT NULL REFERENCES bancos(id),
+    cuenta_bancaria     text,
+    fecha               date        NOT NULL,
+    valor               numeric     NOT NULL,
+    referencia          text,
+    nit_consignante     text,
+    nombre_consignante  text,
+    origen              text,       -- PLANILLA / TRASLADO_CAJA
+    estado_cuadre       text        NOT NULL DEFAULT 'LIBRE',
+    -- LIBRE / BLOQUEADA / EN_CUADRE / ENVIADO_REVISION / APROBADO
+    cuadre_id           uuid,
+    recaudo_id          uuid,
+    bloqueada_por       uuid,
+    bloqueada_at        timestamptz,
+    hash_archivo        text,
+    leido_sharepoint_at timestamptz,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    updated_at          timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE consignaciones_aliados (
+    id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    sede_id             uuid        NOT NULL REFERENCES sedes(id),
+    operacion_id        uuid        REFERENCES operaciones(id),
+    aliado              text        NOT NULL,  -- ALPINA / CARNICOS / NUTRESA / MEALS
+    parametro_id        uuid        REFERENCES parametros_contables(id),
+    banco_id            integer     REFERENCES bancos(id),  -- Auxiliar selecciona tipo EXTERNO
+    numero_documento    text        NOT NULL,
+    referencia          text,
+    fecha               date        NOT NULL,
+    valor               numeric     NOT NULL,
+    moneda              text        NOT NULL DEFAULT 'COP',
+    origen              text,       -- PLANILLA / TRASLADO_CAJA
+    estado_certificacion text       NOT NULL DEFAULT 'SIN_CERTIFICAR',
+    -- CERTIFICADA / SIN_CERTIFICAR / DIFERENCIA
+    certificada_at      timestamptz,
+    estado_cuadre       text        NOT NULL DEFAULT 'LIBRE',
+    -- LIBRE / BLOQUEADA / EN_CUADRE / ENVIADO_REVISION / APROBADO
+    cuadre_id           uuid,
+    recaudo_id          uuid,
+    bloqueada_por       uuid,
+    bloqueada_at        timestamptz,
+    registrada_por      uuid,       -- Solo Alpina manual
+    hash_archivo        text,
+    leido_sharepoint_at timestamptz,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    updated_at          timestamptz NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- 5. TABLAS OPERATIVAS — CUADRE
+-- ============================================================
+
+CREATE TABLE recaudos_dia (
+    id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    consecutivo         text        UNIQUE NOT NULL,   -- DMA-RD-110426
+    sede_id             uuid        NOT NULL REFERENCES sedes(id),
+    fecha               date        NOT NULL,
+    estado              text        NOT NULL DEFAULT 'BORRADOR',
+    -- BORRADOR / ABIERTO / CERRADO_AUXILIAR / APROBADO / DEVUELTO
+    saldo_anterior      numeric     NOT NULL DEFAULT 0,
+    efectivo_planillas  numeric     NOT NULL DEFAULT 0,
+    efectivo_dispersado numeric     NOT NULL DEFAULT 0,
+    nuevo_saldo         numeric     GENERATED ALWAYS AS (saldo_anterior + efectivo_planillas - efectivo_dispersado) STORED,
+    sin_movimiento      boolean     NOT NULL DEFAULT false,
+    auxiliar_id         uuid,       -- → auth.users
+    cerrado_at          timestamptz,
+    analista_id         uuid,       -- → auth.users
+    aprobado_at         timestamptz,
+    nota_devolucion     text,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (sede_id, fecha)
+);
+
+CREATE TABLE cuadres (
+    id                       uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    consecutivo              text        UNIQUE NOT NULL,   -- DMA-110426.01
+    sede_id                  uuid        NOT NULL REFERENCES sedes(id),
+    recaudo_id               uuid        REFERENCES recaudos_dia(id),
+    fecha_cuadre             date        NOT NULL,
+    planillas                text[],     -- ['DA-32641', 'DC-32926']
+    operaciones              text[],     -- ['DA', 'DC']
+    estado                   text        NOT NULL DEFAULT 'BORRADOR',
+    -- BORRADOR / ENVIADO_REVISION / APROBADO / ANULADO
+    conductor_id             uuid        NOT NULL REFERENCES empleados(id),
+    auxiliar_1_id            uuid        REFERENCES empleados(id),
+    auxiliar_2_id            uuid        REFERENCES empleados(id),
+    vehiculo_id              uuid        NOT NULL REFERENCES vehiculos(id),
+    total_cuadrar_contado    numeric     NOT NULL DEFAULT 0,
+    total_anticipos_clientes numeric     NOT NULL DEFAULT 0,
+    total_gastos             numeric     NOT NULL DEFAULT 0,
+    total_consig_riogrande   numeric     NOT NULL DEFAULT 0,
+    total_consig_aliados     numeric     NOT NULL DEFAULT 0,
+    total_anticipos_nomina   numeric     NOT NULL DEFAULT 0,
+    efectivo_real            numeric     NOT NULL DEFAULT 0,
+    efectivo_teorico         numeric     NOT NULL DEFAULT 0,
+    diferencia_efectivo      numeric     GENERATED ALWAYS AS (efectivo_real - efectivo_teorico) STORED,
+    ejecutado_por            uuid        NOT NULL,  -- → auth.users
+    confirmado_at            timestamptz,
+    motivo_anulacion         text,
+    anulado_por              uuid,       -- → auth.users. Solo director.
+    created_at               timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE cuadre_retenciones (
+    id               uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    cuadre_id        uuid        NOT NULL REFERENCES cuadres(id),
+    recaudo_id       uuid        NOT NULL REFERENCES recaudos_dia(id),
+    documento_id     uuid        NOT NULL REFERENCES documentos_erp(id),
+    cliente_id       uuid        REFERENCES clientes(id),
+    parametro_id     uuid        NOT NULL REFERENCES parametros_contables(id),
+    base_retencion   numeric     NOT NULL,
+    porcentaje       numeric     NOT NULL,
+    valor            numeric     NOT NULL,
+    id_externo_odoo  text,       -- operacion_codigo_cliente
+    created_at       timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE gastos (
+    id                              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    cuadre_id                       uuid        REFERENCES cuadres(id),   -- Nullable si TRASLADO_CAJA
+    recaudo_id                      uuid        NOT NULL REFERENCES recaudos_dia(id),
+    parametro_id                    uuid        NOT NULL REFERENCES parametros_contables(id),
+    parametro_retencion_id          uuid        REFERENCES parametros_contables(id),
+    parametro_iva_id                uuid        REFERENCES parametros_contables(id),
+    cuenta_analitica_id             uuid        REFERENCES cuentas_analiticas(id),
+    proveedor_id                    uuid        REFERENCES proveedores(id),  -- Nullable si hurto
+    origen                          text        NOT NULL,  -- PLANILLA / TRASLADO_CAJA
+    documento_electronico_proveedor text,
+    tarifa_iva                      numeric     NOT NULL DEFAULT 0,
+    valor_base                      numeric     NOT NULL,
+    iva                             numeric     NOT NULL DEFAULT 0,
+    valor_retencion                 numeric     NOT NULL DEFAULT 0,
+    valor_total                     numeric     GENERATED ALWAYS AS (valor_base + iva - valor_retencion) STORED,
+    supera_tope                     boolean     NOT NULL DEFAULT false,
+    justificacion_tope              text,
+    created_at                      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE cuadre_anticipos_nomina (
+    id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    cuadre_id           uuid        REFERENCES cuadres(id),  -- Nullable si TRASLADO_CAJA
+    recaudo_id          uuid        NOT NULL REFERENCES recaudos_dia(id),
+    empleado_id         uuid        NOT NULL REFERENCES empleados(id),
+    parametro_id        uuid        NOT NULL REFERENCES parametros_contables(id),
+    cuenta_analitica_id uuid        REFERENCES cuentas_analiticas(id),
+    origen              text        NOT NULL,  -- PLANILLA / TRASLADO_CAJA
+    concepto            text        NOT NULL,  -- ANT_NOMINA / PASAJE / HURTO_RUTA
+    valor               numeric     NOT NULL,
+    estado_autorizacion text        NOT NULL DEFAULT 'APROBADO',
+    -- APROBADO / PENDIENTE si HURTO_RUTA
+    created_at          timestamptz NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- 6. TABLAS OPERATIVAS — RECAUDO Y REVISIÓN
+-- ============================================================
+
+CREATE TABLE destinos_efectivo (
+    id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    recaudo_id   uuid        NOT NULL REFERENCES recaudos_dia(id),
+    parametro_id uuid        NOT NULL REFERENCES parametros_contables(id),
+    valor        numeric     NOT NULL,
+    descripcion  text,
+    created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE soportes_dia (
+    id             uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    recaudo_id     uuid        NOT NULL REFERENCES recaudos_dia(id),
+    tipo_soporte   text        NOT NULL,
+    -- LIQUIDACION_PLANILLAS / CREDITOS_FIRMADOS / NOTAS_CONDICIONADAS /
+    -- RETENCIONES / GASTOS / CONSIG_RIOGRANDE / CONSIG_ALIADOS /
+    -- ANTICIPOS_NOMINA / DESTINOS_EFECTIVO / ARQUEO / DENUNCIA
+    url            text        NOT NULL,
+    nombre_archivo text        NOT NULL,
+    subido_por     uuid        NOT NULL,  -- → auth.users
+    created_at     timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE checklist_revision (
+    id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    recaudo_id   uuid        NOT NULL REFERENCES recaudos_dia(id),
+    item         integer     NOT NULL,   -- 1 al 11
+    descripcion  text        NOT NULL,
+    aplica       boolean     NOT NULL DEFAULT true,
+    estado       text        NOT NULL DEFAULT 'PENDIENTE',
+    -- PENDIENTE / OK / CON_OBSERVACION / FALTANTE / NO_APLICA
+    nota         text,
+    revisado_por uuid,       -- → auth.users
+    revisado_at  timestamptz,
+    UNIQUE (recaudo_id, item)
+);
+
+-- ============================================================
+-- 7. ASIENTOS CONTABLES
+-- ============================================================
+
+CREATE TABLE asientos_contables (
+    id               uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    recaudo_id       uuid        NOT NULL,  -- → hist_recaudos_dia
+    fecha            date        NOT NULL,
+    referencia       text,
+    tipo_movimiento  text        NOT NULL,
+    -- APROVECHAMIENTO / RETENCION_CLIENTE / GASTO / CONSIGNACION_RG /
+    -- CONSIGNACION_ALIADO / ANTICIPO_NOMINA / TRASLADO_EFECTIVO /
+    -- ANTICIPO_CLIENTE / DESCUENTO_ANTICIPO_CLIENTE
+    origen_tabla     text        NOT NULL,
+    origen_id        uuid        NOT NULL,
+    debito_cuenta    text        NOT NULL,
+    debito_analitica text,
+    credito_cuenta   text        NOT NULL,
+    -- COALESCE(parametro.cuenta_contable_credito, sedes.cuenta_caja)
+    credito_analitica text,
+    diario_odoo      text,
+    nit_tercero      text,
+    nombre_tercero   text,
+    id_externo_odoo  text,
+    tarifa_iva       numeric     NOT NULL DEFAULT 0,
+    valor            numeric     NOT NULL,
+    descripcion      text,
+    estado_odoo      text        NOT NULL DEFAULT 'PENDIENTE',
+    -- PENDIENTE / ENVIADO / CONFIRMADO / ERROR
+    error_sync       text,
+    enviado_at       timestamptz,
+    referencia_odoo  text,
+    created_at       timestamptz NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- 8. TABLAS HISTÓRICAS
+-- ============================================================
+
+CREATE TABLE hist_recaudos_dia          (LIKE recaudos_dia          INCLUDING ALL);
+CREATE TABLE hist_cuadres               (LIKE cuadres               INCLUDING ALL);
+CREATE TABLE hist_retenciones           (LIKE cuadre_retenciones    INCLUDING ALL);
+CREATE TABLE hist_gastos                (LIKE gastos                INCLUDING ALL);
+CREATE TABLE hist_anticipos_nomina      (LIKE cuadre_anticipos_nomina INCLUDING ALL);
+CREATE TABLE hist_destinos_efectivo     (LIKE destinos_efectivo     INCLUDING ALL);
+CREATE TABLE hist_soportes_dia          (LIKE soportes_dia          INCLUDING ALL);
+CREATE TABLE hist_checklist_revision    (LIKE checklist_revision    INCLUDING ALL);
+CREATE TABLE hist_documentos_erp        (LIKE documentos_erp        INCLUDING ALL);
+CREATE TABLE hist_consignaciones_banco  (LIKE consignaciones_banco  INCLUDING ALL);
+CREATE TABLE hist_consignaciones_aliados(LIKE consignaciones_aliados INCLUDING ALL);
+CREATE TABLE hist_clientes              (LIKE clientes              INCLUDING ALL);
+CREATE TABLE hist_proveedores           (LIKE proveedores           INCLUDING ALL);
+CREATE TABLE hist_documentos_dian       (LIKE documentos_dian       INCLUDING ALL);
+
+-- Agregar campo promovido_at a todas las históricas
+DO $$
+DECLARE t text;
+DECLARE tablas_hist text[] := ARRAY[
+    'hist_recaudos_dia','hist_cuadres','hist_retenciones',
+    'hist_gastos','hist_anticipos_nomina','hist_destinos_efectivo',
+    'hist_soportes_dia','hist_checklist_revision','hist_documentos_erp',
+    'hist_consignaciones_banco','hist_consignaciones_aliados',
+    'hist_clientes','hist_proveedores','hist_documentos_dian'
+];
+BEGIN
+    FOREACH t IN ARRAY tablas_hist LOOP
+        EXECUTE format('ALTER TABLE %I ADD COLUMN promovido_at timestamptz NOT NULL DEFAULT now()', t);
+    END LOOP;
+END;
+$$;
+
+-- ============================================================
+-- 9. AUDIT LOG
+-- ============================================================
+
+CREATE TABLE audit_log (
+    id             uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    tabla          text        NOT NULL,
+    registro_id    uuid        NOT NULL,
+    accion         text        NOT NULL,
+    -- INSERT / UPDATE / DELETE / APPROVE / REJECT / ANULAR
+    usuario_id     uuid,
+    usuario_email  text,
+    ip_address     text,
+    valor_anterior jsonb,
+    valor_nuevo    jsonb,
+    created_at     timestamptz NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- 10. ÍNDICES
+-- ============================================================
+
+-- documentos_erp
+CREATE INDEX idx_doc_erp_operacion_planilla  ON documentos_erp(operacion_planilla);
+CREATE INDEX idx_doc_erp_operacion_id        ON documentos_erp(operacion_id);
+CREATE INDEX idx_doc_erp_cliente_id          ON documentos_erp(cliente_id);
+CREATE INDEX idx_doc_erp_estado_at           ON documentos_erp(estado_at);
+CREATE INDEX idx_doc_erp_estado_dian         ON documentos_erp(estado_dian);
+CREATE INDEX idx_doc_erp_fecha_emision       ON documentos_erp(fecha_emision);
+CREATE INDEX idx_doc_erp_doc_electronico     ON documentos_erp(documento_electronico);
+CREATE INDEX idx_doc_erp_recaudo_id          ON documentos_erp(recaudo_id);
+
+-- documentos_dian
+CREATE INDEX idx_doc_dian_operacion_id       ON documentos_dian(operacion_id);
+CREATE INDEX idx_doc_dian_estado             ON documentos_dian(estado_dian);
+CREATE INDEX idx_doc_dian_fecha              ON documentos_dian(fecha_emision);
+
+-- clientes
+CREATE INDEX idx_clientes_operacion_id       ON clientes(operacion_id);
+CREATE INDEX idx_clientes_nit                ON clientes(numero_identificacion);
+CREATE INDEX idx_clientes_sync               ON clientes(sincronizado_odoo, requiere_sync_odoo);
+
+-- proveedores
+CREATE INDEX idx_proveedores_sync            ON proveedores(sincronizado_odoo, requiere_sync_odoo);
+
+-- consignaciones_banco
+CREATE INDEX idx_consig_banco_sede_fecha     ON consignaciones_banco(sede_id, fecha);
+CREATE INDEX idx_consig_banco_estado         ON consignaciones_banco(estado_cuadre);
+CREATE INDEX idx_consig_banco_cuadre         ON consignaciones_banco(cuadre_id);
+
+-- consignaciones_aliados
+CREATE INDEX idx_consig_aliados_sede_aliado  ON consignaciones_aliados(sede_id, aliado);
+CREATE INDEX idx_consig_aliados_estado_cert  ON consignaciones_aliados(estado_certificacion);
+CREATE INDEX idx_consig_aliados_cuadre       ON consignaciones_aliados(cuadre_id);
+
+-- recaudos_dia
+CREATE INDEX idx_recaudos_sede_fecha         ON recaudos_dia(sede_id, fecha);
+CREATE INDEX idx_recaudos_estado             ON recaudos_dia(estado);
+
+-- cuadres
+CREATE INDEX idx_cuadres_sede_fecha          ON cuadres(sede_id, fecha_cuadre);
+CREATE INDEX idx_cuadres_recaudo             ON cuadres(recaudo_id);
+CREATE INDEX idx_cuadres_estado              ON cuadres(estado);
+
+-- gastos
+CREATE INDEX idx_gastos_cuadre               ON gastos(cuadre_id);
+CREATE INDEX idx_gastos_recaudo              ON gastos(recaudo_id);
+CREATE INDEX idx_gastos_proveedor            ON gastos(proveedor_id);
+
+-- cuadre_retenciones
+CREATE INDEX idx_retenciones_cuadre          ON cuadre_retenciones(cuadre_id);
+CREATE INDEX idx_retenciones_cliente         ON cuadre_retenciones(cliente_id);
+
+-- cuadre_anticipos_nomina
+CREATE INDEX idx_anticipos_cuadre            ON cuadre_anticipos_nomina(cuadre_id);
+CREATE INDEX idx_anticipos_empleado          ON cuadre_anticipos_nomina(empleado_id);
+
+-- asientos_contables
+CREATE INDEX idx_asientos_recaudo            ON asientos_contables(recaudo_id);
+CREATE INDEX idx_asientos_tipo               ON asientos_contables(tipo_movimiento);
+CREATE INDEX idx_asientos_estado_odoo        ON asientos_contables(estado_odoo);
+CREATE INDEX idx_asientos_fecha              ON asientos_contables(fecha);
+
+-- audit_log
+CREATE INDEX idx_audit_tabla                 ON audit_log(tabla);
+CREATE INDEX idx_audit_registro              ON audit_log(registro_id);
+CREATE INDEX idx_audit_usuario               ON audit_log(usuario_id);
+CREATE INDEX idx_audit_created               ON audit_log(created_at);
+
+-- ============================================================
+-- 11. FUNCIONES
+-- ============================================================
+
+-- -------------------------------------------------------
+-- generar_consecutivo_cuadre
+-- Genera: DMA-110426.01 — con lock para evitar duplicados
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION generar_consecutivo_cuadre(
+    p_sede_id uuid,
+    p_fecha   date
+) RETURNS text AS $$
+DECLARE
+    v_codigo    text;
+    v_fecha_str text;
+    v_numero    integer;
+BEGIN
+    SELECT codigo INTO v_codigo FROM sedes WHERE id = p_sede_id;
+    v_fecha_str := to_char(p_fecha, 'DDMMYY');
+    PERFORM pg_advisory_xact_lock(hashtext(p_sede_id::text));
+    INSERT INTO consecutivos_cuadre (sede_id, fecha, ultimo_numero)
+    VALUES (p_sede_id, p_fecha, 1)
+    ON CONFLICT (sede_id) DO UPDATE
+        SET ultimo_numero = CASE
+            WHEN consecutivos_cuadre.fecha = p_fecha
+            THEN consecutivos_cuadre.ultimo_numero + 1
+            ELSE 1 END,
+            fecha = p_fecha
+    RETURNING ultimo_numero INTO v_numero;
+    RETURN v_codigo || '-' || v_fecha_str || '.' || lpad(v_numero::text, 2, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+-- -------------------------------------------------------
+-- generar_consecutivo_recaudo
+-- Genera: DMA-RD-110426 / DMA-RD-110426-R1 si rehecho
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION generar_consecutivo_recaudo(
+    p_sede_id uuid,
+    p_fecha   date,
+    p_rehecho boolean DEFAULT false
+) RETURNS text AS $$
+DECLARE
+    v_codigo      text;
+    v_fecha_str   text;
+    v_consecutivo text;
+    v_count       integer;
+BEGIN
+    SELECT codigo INTO v_codigo FROM sedes WHERE id = p_sede_id;
+    v_fecha_str   := to_char(p_fecha, 'DDMMYY');
+    v_consecutivo := v_codigo || '-RD-' || v_fecha_str;
+    IF p_rehecho THEN
+        SELECT COUNT(*) INTO v_count
+        FROM recaudos_dia
+        WHERE sede_id = p_sede_id AND fecha = p_fecha;
+        v_consecutivo := v_consecutivo || '-R' || v_count::text;
+    END IF;
+    RETURN v_consecutivo;
+END;
+$$ LANGUAGE plpgsql;
+
+-- -------------------------------------------------------
+-- get_saldo_anterior
+-- Último nuevo_saldo aprobado de la sede
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION get_saldo_anterior(
+    p_sede_id uuid,
+    p_fecha   date
+) RETURNS numeric AS $$
+DECLARE v_saldo numeric;
+BEGIN
+    SELECT nuevo_saldo INTO v_saldo
+    FROM recaudos_dia
+    WHERE sede_id = p_sede_id
+      AND fecha < p_fecha
+      AND estado = 'APROBADO'
+    ORDER BY fecha DESC LIMIT 1;
+    RETURN COALESCE(v_saldo, 0);
+END;
+$$ LANGUAGE plpgsql;
+
+-- -------------------------------------------------------
+-- validar_dias_sin_aprobar
+-- Verifica que la sede no exceda MAX_DIAS_SIN_APROBAR
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION validar_dias_sin_aprobar(
+    p_sede_id uuid
+) RETURNS boolean AS $$
+DECLARE
+    v_max  integer;
+    v_dias integer;
+BEGIN
+    SELECT valor::integer INTO v_max
+    FROM parametros_sistema WHERE clave = 'MAX_DIAS_SIN_APROBAR';
+    SELECT COUNT(*) INTO v_dias
+    FROM recaudos_dia
+    WHERE sede_id = p_sede_id AND estado = 'CERRADO_AUXILIAR';
+    RETURN v_dias <= COALESCE(v_max, 2);
+END;
+$$ LANGUAGE plpgsql;
+
+-- -------------------------------------------------------
+-- liberar_bloqueos_expirados
+-- Libera consignaciones bloqueadas con timeout vencido
+-- Ejecutar periódicamente via pg_cron o cron externo
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION liberar_bloqueos_expirados()
+RETURNS void AS $$
+DECLARE v_timeout integer;
+BEGIN
+    SELECT valor::integer INTO v_timeout
+    FROM parametros_sistema WHERE clave = 'TIMEOUT_SESION_MINUTOS';
+    UPDATE consignaciones_banco
+    SET estado_cuadre = 'LIBRE', bloqueada_por = NULL, bloqueada_at = NULL
+    WHERE estado_cuadre = 'BLOQUEADA'
+      AND bloqueada_at < now() - (v_timeout || ' minutes')::interval;
+    UPDATE consignaciones_aliados
+    SET estado_cuadre = 'LIBRE', bloqueada_por = NULL, bloqueada_at = NULL
+    WHERE estado_cuadre = 'BLOQUEADA'
+      AND bloqueada_at < now() - (v_timeout || ' minutes')::interval;
+END;
+$$ LANGUAGE plpgsql;
+
+-- -------------------------------------------------------
+-- cruzar_documentos_dian
+-- Al importar informe DIAN, actualiza estado_dian en documentos_erp
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION cruzar_documentos_dian()
+RETURNS void AS $$
+BEGIN
+    UPDATE documentos_erp de
+    SET estado_dian      = dd.estado_dian,
+        validado_dian_at = now()
+    FROM documentos_dian dd
+    WHERE de.documento_electronico = dd.documento_electronico
+      AND de.documento_electronico IS NOT NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- -------------------------------------------------------
+-- promover_a_historico
+-- Copia un recaudo aprobado y todos sus datos al histórico
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION promover_a_historico(
+    p_recaudo_id uuid
+) RETURNS void AS $$
+DECLARE v_recaudo recaudos_dia%ROWTYPE;
+BEGIN
+    SELECT * INTO v_recaudo FROM recaudos_dia WHERE id = p_recaudo_id;
+    IF v_recaudo.estado != 'APROBADO' THEN
+        RAISE EXCEPTION 'Solo se pueden promover recaudos en estado APROBADO';
+    END IF;
+
+    INSERT INTO hist_recaudos_dia
+        SELECT *, now() FROM recaudos_dia WHERE id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    INSERT INTO hist_cuadres
+        SELECT *, now() FROM cuadres WHERE recaudo_id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    INSERT INTO hist_retenciones
+        SELECT *, now() FROM cuadre_retenciones WHERE recaudo_id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    INSERT INTO hist_gastos
+        SELECT *, now() FROM gastos WHERE recaudo_id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    INSERT INTO hist_anticipos_nomina
+        SELECT *, now() FROM cuadre_anticipos_nomina WHERE recaudo_id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    INSERT INTO hist_destinos_efectivo
+        SELECT *, now() FROM destinos_efectivo WHERE recaudo_id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    INSERT INTO hist_soportes_dia
+        SELECT *, now() FROM soportes_dia WHERE recaudo_id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    INSERT INTO hist_checklist_revision
+        SELECT *, now() FROM checklist_revision WHERE recaudo_id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    INSERT INTO hist_documentos_erp
+        SELECT *, now() FROM documentos_erp WHERE recaudo_id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    INSERT INTO hist_consignaciones_banco
+        SELECT *, now() FROM consignaciones_banco WHERE recaudo_id = p_recaudo_id
+        ON CONFLICT DO NOTHING;
+
+    -- Alpina SIN_CERTIFICAR NO se copia al histórico hasta que se concilie
+    INSERT INTO hist_consignaciones_aliados
+        SELECT *, now() FROM consignaciones_aliados
+        WHERE recaudo_id = p_recaudo_id
+          AND NOT (aliado = 'ALPINA' AND estado_certificacion = 'SIN_CERTIFICAR')
+        ON CONFLICT DO NOTHING;
+
+    -- Clientes involucrados en este recaudo
+    INSERT INTO hist_clientes
+        SELECT c.*, now() FROM clientes c
+        WHERE c.id IN (
+            SELECT DISTINCT cliente_id FROM documentos_erp
+            WHERE recaudo_id = p_recaudo_id AND cliente_id IS NOT NULL
+        )
+        ON CONFLICT DO NOTHING;
+
+    -- Proveedores involucrados en este recaudo
+    INSERT INTO hist_proveedores
+        SELECT p.*, now() FROM proveedores p
+        WHERE p.id IN (
+            SELECT DISTINCT proveedor_id FROM gastos
+            WHERE recaudo_id = p_recaudo_id AND proveedor_id IS NOT NULL
+        )
+        ON CONFLICT DO NOTHING;
+
+END;
+$$ LANGUAGE plpgsql;
+
+-- -------------------------------------------------------
+-- generar_asientos
+-- Construye asientos_contables desde tablas hist_
+-- Lógica: credito_cuenta = COALESCE(param.cuenta_contable_credito, sedes.cuenta_caja)
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION generar_asientos(
+    p_recaudo_id uuid
+) RETURNS void AS $$
+DECLARE
+    v_sede_id     uuid;
+    v_cuenta_caja text;
+    v_fecha       date;
+    v_consecutivo text;
+BEGIN
+    SELECT r.sede_id, s.cuenta_caja, r.fecha, r.consecutivo
+    INTO v_sede_id, v_cuenta_caja, v_fecha, v_consecutivo
+    FROM hist_recaudos_dia r
+    JOIN sedes s ON s.id = r.sede_id
+    WHERE r.id = p_recaudo_id;
+
+    -- ── TIPO 1: APROVECHAMIENTOS ─────────────────────────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta,
+        credito_cuenta, credito_analitica,
+        diario_odoo, nit_tercero, nombre_tercero, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha, c.consecutivo, 'APROVECHAMIENTO',
+        'hist_cuadres', c.id,
+        v_cuenta_caja,
+        pc.cuenta_contable_debito, pc.cuenta_analitica,
+        pc.diario_odoo, pc.nit_tercero, pc.nombre_tercero,
+        c.diferencia_efectivo,
+        'Aprovechamiento sobrante efectivo - ' || c.consecutivo
+    FROM hist_cuadres c
+    JOIN parametros_contables pc ON pc.tipo = 'APROVECHAMIENTO'
+        AND pc.sede_id = v_sede_id AND pc.activo = true
+    WHERE c.recaudo_id = p_recaudo_id
+      AND c.diferencia_efectivo > 0;
+
+    -- ── TIPO 2: RETENCIONES CLIENTES (solo CONTADO) ──────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero,
+        id_externo_odoo, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha, d.factura_referencia, 'RETENCION_CLIENTE',
+        'hist_retenciones', r.id,
+        pc.cuenta_contable_debito, d.cuenta_analitica,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc.diario_odoo,
+        cl.numero_identificacion, cl.nombre_establecimiento,
+        r.id_externo_odoo, r.valor,
+        'Retención cliente - ' || pc.nombre_asiento || ' - ' || d.factura_referencia
+    FROM hist_retenciones r
+    JOIN hist_documentos_erp d   ON d.id = r.documento_id
+    JOIN parametros_contables pc ON pc.id = r.parametro_id
+    LEFT JOIN clientes cl        ON cl.id = r.cliente_id
+    WHERE r.recaudo_id = p_recaudo_id
+      AND d.cr_co = 'CONTADO';
+
+    -- ── TIPO 3A: GASTOS SIN IVA SIN RETENCIÓN ────────────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha,
+        COALESCE(g.documento_electronico_proveedor, v_consecutivo),
+        'GASTO', 'hist_gastos', g.id,
+        pc.cuenta_contable_debito, ca.codigo_odoo,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc.diario_odoo, pv.nit, pv.nombre,
+        g.valor_base,
+        'Gasto - ' || pc.nombre_asiento
+    FROM hist_gastos g
+    JOIN parametros_contables pc ON pc.id = g.parametro_id
+    LEFT JOIN cuentas_analiticas ca ON ca.id = g.cuenta_analitica_id
+    LEFT JOIN proveedores pv        ON pv.id = g.proveedor_id
+    WHERE g.recaudo_id = p_recaudo_id
+      AND g.tarifa_iva = 0 AND g.valor_retencion = 0;
+
+    -- ── TIPO 3B: GASTOS CON IVA (débito gasto) ───────────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero,
+        tarifa_iva, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha,
+        COALESCE(g.documento_electronico_proveedor, v_consecutivo),
+        'GASTO', 'hist_gastos', g.id,
+        pc.cuenta_contable_debito, ca.codigo_odoo,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc.diario_odoo, pv.nit, pv.nombre,
+        g.tarifa_iva, g.valor_base,
+        'Gasto - ' || pc.nombre_asiento
+    FROM hist_gastos g
+    JOIN parametros_contables pc ON pc.id = g.parametro_id
+    LEFT JOIN cuentas_analiticas ca ON ca.id = g.cuenta_analitica_id
+    LEFT JOIN proveedores pv        ON pv.id = g.proveedor_id
+    WHERE g.recaudo_id = p_recaudo_id
+      AND g.tarifa_iva > 0 AND g.valor_retencion = 0;
+
+    -- ── TIPO 3B: GASTOS CON IVA (débito IVA descontable) ─
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero,
+        tarifa_iva, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha,
+        COALESCE(g.documento_electronico_proveedor, v_consecutivo),
+        'GASTO', 'hist_gastos', g.id,
+        pc_iva.cuenta_contable_debito, ca.codigo_odoo,
+        COALESCE(pc_iva.cuenta_contable_credito, v_cuenta_caja),
+        pc_iva.diario_odoo, pv.nit, pv.nombre,
+        g.tarifa_iva, g.iva,
+        'IVA descontable ' || g.tarifa_iva || '% - ' || pc.nombre_asiento
+    FROM hist_gastos g
+    JOIN parametros_contables pc     ON pc.id = g.parametro_id
+    JOIN parametros_contables pc_iva ON pc_iva.id = g.parametro_iva_id
+    LEFT JOIN cuentas_analiticas ca  ON ca.id = g.cuenta_analitica_id
+    LEFT JOIN proveedores pv         ON pv.id = g.proveedor_id
+    WHERE g.recaudo_id = p_recaudo_id
+      AND g.tarifa_iva > 0 AND g.valor_retencion = 0;
+
+    -- ── TIPO 3C: GASTOS CON RETENCIÓN (débito gasto) ─────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero,
+        tarifa_iva, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha,
+        COALESCE(g.documento_electronico_proveedor, v_consecutivo),
+        'GASTO', 'hist_gastos', g.id,
+        pc.cuenta_contable_debito, ca.codigo_odoo,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc.diario_odoo, pv.nit, pv.nombre,
+        g.tarifa_iva, g.valor_base,
+        'Gasto con retención - ' || pc.nombre_asiento
+    FROM hist_gastos g
+    JOIN parametros_contables pc ON pc.id = g.parametro_id
+    LEFT JOIN cuentas_analiticas ca ON ca.id = g.cuenta_analitica_id
+    LEFT JOIN proveedores pv        ON pv.id = g.proveedor_id
+    WHERE g.recaudo_id = p_recaudo_id
+      AND g.valor_retencion > 0;
+
+    -- ── TIPO 3C: GASTOS CON RETENCIÓN (crédito retención) ─
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta,
+        credito_cuenta, credito_analitica,
+        diario_odoo, nit_tercero, nombre_tercero, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha,
+        COALESCE(g.documento_electronico_proveedor, v_consecutivo),
+        'GASTO', 'hist_gastos', g.id,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc_ret.cuenta_contable_debito, ca.codigo_odoo,
+        pc_ret.diario_odoo, pv.nit, pv.nombre,
+        g.valor_retencion,
+        'Retención proveedor - ' || pc_ret.nombre_asiento
+    FROM hist_gastos g
+    JOIN parametros_contables pc     ON pc.id = g.parametro_id
+    JOIN parametros_contables pc_ret ON pc_ret.id = g.parametro_retencion_id
+    LEFT JOIN cuentas_analiticas ca  ON ca.id = g.cuenta_analitica_id
+    LEFT JOIN proveedores pv         ON pv.id = g.proveedor_id
+    WHERE g.recaudo_id = p_recaudo_id
+      AND g.valor_retencion > 0;
+
+    -- ── TIPO 4: CONSIGNACIONES RIOGRANDE ─────────────────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha,
+        COALESCE(cb.referencia, v_consecutivo || ' / ' || v_consecutivo),
+        'CONSIGNACION_RG', 'hist_consignaciones_banco', cb.id,
+        pc.cuenta_contable_debito,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc.diario_odoo, pc.nit_tercero, pc.nombre_tercero,
+        cb.valor,
+        'Consignación a Riogrande - ' || pc.nombre_asiento
+    FROM hist_consignaciones_banco cb
+    JOIN parametros_contables pc ON pc.tipo = 'CONSIGNACION_RG'
+        AND pc.banco_id = cb.banco_id AND pc.activo = true
+    WHERE cb.recaudo_id = p_recaudo_id;
+
+    -- ── TIPO 5: CONSIGNACIONES ALIADOS (excl. Alpina) ────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha, v_consecutivo, 'CONSIGNACION_ALIADO',
+        'hist_consignaciones_aliados', ca_tab.id,
+        pc.cuenta_contable_debito, pc.cuenta_analitica,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc.diario_odoo, pc.nit_tercero, pc.nombre_tercero,
+        ca_tab.valor,
+        'Consignación aliado - ' || ca_tab.aliado
+    FROM hist_consignaciones_aliados ca_tab
+    JOIN parametros_contables pc ON pc.id = ca_tab.parametro_id
+    WHERE ca_tab.recaudo_id = p_recaudo_id
+      AND ca_tab.aliado != 'ALPINA'
+      AND ca_tab.estado_certificacion = 'CERTIFICADA';
+
+    -- ── TIPO 7: ANTICIPOS NÓMINA ─────────────────────────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha, v_consecutivo, 'ANTICIPO_NOMINA',
+        'hist_anticipos_nomina', an.id,
+        pc.cuenta_contable_debito, ca.codigo_odoo,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc.diario_odoo, e.nit, e.nombre_completo,
+        an.valor,
+        'Anticipo nómina - ' || an.concepto || ' - ' || e.nombre_completo
+    FROM hist_anticipos_nomina an
+    JOIN empleados e                ON e.id = an.empleado_id
+    JOIN parametros_contables pc    ON pc.id = an.parametro_id
+    LEFT JOIN cuentas_analiticas ca ON ca.id = an.cuenta_analitica_id
+    WHERE an.recaudo_id = p_recaudo_id
+      AND an.estado_autorizacion = 'APROBADO';
+
+    -- ── TIPO 8: TRASLADOS DE CAJA ─────────────────────────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha, v_consecutivo, 'TRASLADO_EFECTIVO',
+        'hist_destinos_efectivo', de.id,
+        pc.cuenta_contable_debito,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc.diario_odoo, pc.nit_tercero, pc.nombre_tercero,
+        de.valor,
+        'Traslado de caja - ' || pc.nombre_asiento
+    FROM hist_destinos_efectivo de
+    JOIN parametros_contables pc ON pc.id = de.parametro_id
+    WHERE de.recaudo_id = p_recaudo_id;
+
+    -- ── TIPO 9: ANTICIPO CLIENTE (valor positivo) ─────────
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta, credito_analitica,
+        diario_odoo, nit_tercero, nombre_tercero,
+        id_externo_odoo, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha, d.operacion_codigo_cliente, 'ANTICIPO_CLIENTE',
+        'hist_documentos_erp', d.id,
+        v_cuenta_caja, d.cuenta_analitica,
+        pc.cuenta_contable_debito, d.cuenta_analitica,
+        pc.diario_odoo,
+        cl.numero_identificacion, cl.nombre_establecimiento,
+        d.operacion_codigo_cliente,
+        d.valor_sin_iva,
+        'Anticipo cliente - ' || cl.nombre_establecimiento
+    FROM hist_documentos_erp d
+    JOIN parametros_contables pc ON pc.tipo = 'ANTICIPO_CLIENTE' AND pc.activo = true
+    LEFT JOIN clientes cl        ON cl.id = d.cliente_id
+    WHERE d.recaudo_id = p_recaudo_id
+      AND d.tipo_documento = 'ANTICIPO'
+      AND d.valor_sin_iva > 0;
+
+    -- ── TIPO 10: DESCUENTO ANTICIPO CLIENTE (valor negativo)
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta, credito_analitica,
+        diario_odoo, nit_tercero, nombre_tercero,
+        id_externo_odoo, valor, descripcion
+    )
+    SELECT
+        p_recaudo_id, v_fecha, d.factura_referencia, 'DESCUENTO_ANTICIPO_CLIENTE',
+        'hist_documentos_erp', d.id,
+        pc.cuenta_contable_debito, d.cuenta_analitica,
+        pc.cuenta_contable_credito, d.cuenta_analitica,
+        pc.diario_odoo,
+        cl.numero_identificacion, cl.nombre_establecimiento,
+        d.operacion_codigo_cliente,
+        ABS(d.valor_sin_iva),
+        'Descuento anticipo cliente - ' || cl.nombre_establecimiento
+    FROM hist_documentos_erp d
+    JOIN parametros_contables pc ON pc.tipo = 'DESCUENTO_ANTICIPO_CLIENTE' AND pc.activo = true
+    LEFT JOIN clientes cl        ON cl.id = d.cliente_id
+    WHERE d.recaudo_id = p_recaudo_id
+      AND d.tipo_documento = 'ANTICIPO'
+      AND d.valor_sin_iva < 0;
+
+END;
+$$ LANGUAGE plpgsql;
+
+-- -------------------------------------------------------
+-- generar_asientos_alpina
+-- Se ejecuta al certificar la conciliación mensual
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION generar_asientos_alpina(
+    p_sede_id uuid,
+    p_mes     integer,
+    p_anio    integer
+) RETURNS void AS $$
+DECLARE v_cuenta_caja text;
+BEGIN
+    SELECT cuenta_caja INTO v_cuenta_caja FROM sedes WHERE id = p_sede_id;
+    INSERT INTO asientos_contables (
+        recaudo_id, fecha, referencia, tipo_movimiento,
+        origen_tabla, origen_id,
+        debito_cuenta, debito_analitica,
+        credito_cuenta,
+        diario_odoo, nit_tercero, nombre_tercero, valor, descripcion
+    )
+    SELECT
+        ca_tab.recaudo_id, ca_tab.fecha, ca_tab.numero_documento,
+        'CONSIGNACION_ALIADO', 'hist_consignaciones_aliados', ca_tab.id,
+        pc.cuenta_contable_debito, pc.cuenta_analitica,
+        COALESCE(pc.cuenta_contable_credito, v_cuenta_caja),
+        pc.diario_odoo, pc.nit_tercero, pc.nombre_tercero,
+        ca_tab.valor,
+        'Consignación Alpina conciliada - ' || ca_tab.numero_documento
+    FROM hist_consignaciones_aliados ca_tab
+    JOIN parametros_contables pc ON pc.id = ca_tab.parametro_id
+    WHERE ca_tab.sede_id = p_sede_id
+      AND ca_tab.aliado = 'ALPINA'
+      AND ca_tab.estado_certificacion = 'CERTIFICADA'
+      AND EXTRACT(MONTH FROM ca_tab.fecha) = p_mes
+      AND EXTRACT(YEAR  FROM ca_tab.fecha) = p_anio
+      AND ca_tab.id NOT IN (
+          SELECT origen_id FROM asientos_contables
+          WHERE tipo_movimiento = 'CONSIGNACION_ALIADO'
+      );
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- 12. TRIGGERS
+-- ============================================================
+
+-- ── Audit log ────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION fn_audit_log() RETURNS trigger AS $$
+BEGIN
+    INSERT INTO audit_log (
+        tabla, registro_id, accion,
+        usuario_id, usuario_email, ip_address,
+        valor_anterior, valor_nuevo
+    ) VALUES (
+        TG_TABLE_NAME,
+        COALESCE(NEW.id, OLD.id),
+        TG_OP,
+        current_setting('app.current_user_id',    true)::uuid,
+        current_setting('app.current_user_email', true),
+        current_setting('app.current_ip',         true),
+        CASE WHEN TG_OP IN ('UPDATE','DELETE') THEN to_jsonb(OLD) ELSE NULL END,
+        CASE WHEN TG_OP IN ('INSERT','UPDATE') THEN to_jsonb(NEW) ELSE NULL END
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+DECLARE t text;
+DECLARE tablas text[] := ARRAY[
+    'sedes','operaciones','bancos','cuentas_analiticas',
+    'parametros_contables','parametros_sistema','empleados','vehiculos',
+    'clientes','proveedores',
+    'documentos_erp','documentos_dian',
+    'consignaciones_banco','consignaciones_aliados',
+    'recaudos_dia','cuadres','cuadre_retenciones','gastos',
+    'cuadre_anticipos_nomina','destinos_efectivo',
+    'soportes_dia','checklist_revision','asientos_contables'
+];
+BEGIN
+    FOREACH t IN ARRAY tablas LOOP
+        EXECUTE format('
+            CREATE TRIGGER trg_audit_%I
+            AFTER INSERT OR UPDATE OR DELETE ON %I
+            FOR EACH ROW EXECUTE FUNCTION fn_audit_log()
+        ', t, t);
+    END LOOP;
+END;
+$$;
+
+-- ── updated_at automático ────────────────────────────────────
+CREATE OR REPLACE FUNCTION fn_updated_at() RETURNS trigger AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_upd_documentos_erp
+    BEFORE UPDATE ON documentos_erp
+    FOR EACH ROW EXECUTE FUNCTION fn_updated_at();
+
+CREATE TRIGGER trg_upd_documentos_dian
+    BEFORE UPDATE ON documentos_dian
+    FOR EACH ROW EXECUTE FUNCTION fn_updated_at();
+
+CREATE TRIGGER trg_upd_consig_banco
+    BEFORE UPDATE ON consignaciones_banco
+    FOR EACH ROW EXECUTE FUNCTION fn_updated_at();
+
+CREATE TRIGGER trg_upd_consig_aliados
+    BEFORE UPDATE ON consignaciones_aliados
+    FOR EACH ROW EXECUTE FUNCTION fn_updated_at();
+
+CREATE TRIGGER trg_upd_clientes
+    BEFORE UPDATE ON clientes
+    FOR EACH ROW EXECUTE FUNCTION fn_updated_at();
+
+CREATE TRIGGER trg_upd_proveedores
+    BEFORE UPDATE ON proveedores
+    FOR EACH ROW EXECUTE FUNCTION fn_updated_at();
+
+-- ── Proteger tablas históricas y audit_log ───────────────────
+CREATE OR REPLACE FUNCTION fn_proteger_historico() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'La tabla % es inmutable. No se permite % en ella.', TG_TABLE_NAME, TG_OP;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+DECLARE t text;
+DECLARE tablas_hist text[] := ARRAY[
+    'hist_recaudos_dia','hist_cuadres','hist_retenciones',
+    'hist_gastos','hist_anticipos_nomina','hist_destinos_efectivo',
+    'hist_soportes_dia','hist_checklist_revision','hist_documentos_erp',
+    'hist_consignaciones_banco','hist_consignaciones_aliados',
+    'hist_clientes','hist_proveedores','hist_documentos_dian',
+    'audit_log'
+];
+BEGIN
+    FOREACH t IN ARRAY tablas_hist LOOP
+        EXECUTE format('
+            CREATE TRIGGER trg_proteger_%I
+            BEFORE UPDATE OR DELETE ON %I
+            FOR EACH ROW EXECUTE FUNCTION fn_proteger_historico()
+        ', t, t);
+    END LOOP;
+END;
+$$;
+
+-- ── Cruce automático DIAN cuando se importa documentos_dian ──
+CREATE OR REPLACE FUNCTION fn_cruzar_dian_on_insert() RETURNS trigger AS $$
+BEGIN
+    UPDATE documentos_erp
+    SET estado_dian      = NEW.estado_dian,
+        validado_dian_at = now()
+    WHERE documento_electronico = NEW.documento_electronico
+      AND documento_electronico IS NOT NULL;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_cruzar_dian
+    AFTER INSERT OR UPDATE ON documentos_dian
+    FOR EACH ROW EXECUTE FUNCTION fn_cruzar_dian_on_insert();
+
+-- ── Marcar requiere_sync_odoo cuando cambian datos del cliente
+CREATE OR REPLACE FUNCTION fn_cliente_changed() RETURNS trigger AS $$
+BEGIN
+    IF OLD.sincronizado_odoo = true AND (
+        OLD.numero_identificacion  != NEW.numero_identificacion  OR
+        OLD.nombre_establecimiento != NEW.nombre_establecimiento OR
+        OLD.nombre_completo        != NEW.nombre_completo        OR
+        OLD.correo                 != NEW.correo                 OR
+        OLD.telefono               != NEW.telefono               OR
+        OLD.direccion              != NEW.direccion
+    ) THEN
+        NEW.requiere_sync_odoo := true;
+        NEW.sincronizado_odoo  := false;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_cliente_changed
+    BEFORE UPDATE ON clientes
+    FOR EACH ROW EXECUTE FUNCTION fn_cliente_changed();
+
+-- ── Marcar requiere_sync_odoo cuando cambian datos del proveedor
+CREATE OR REPLACE FUNCTION fn_proveedor_changed() RETURNS trigger AS $$
+BEGIN
+    IF OLD.sincronizado_odoo = true AND (
+        OLD.nit    != NEW.nit    OR
+        OLD.nombre != NEW.nombre
+    ) THEN
+        NEW.requiere_sync_odoo := true;
+        NEW.sincronizado_odoo  := false;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_proveedor_changed
+    BEFORE UPDATE ON proveedores
+    FOR EACH ROW EXECUTE FUNCTION fn_proveedor_changed();
+
+-- ============================================================
+-- 13. DATOS INICIALES
+-- ============================================================
+
+-- Sedes
+INSERT INTO sedes (codigo, nombre, letra, cuenta_caja) VALUES
+    ('DMA', 'Donmatías', 'D', '130501'),
+    ('CAC', 'Caucasia',  'C', '130502'),
+    ('APA', 'Apartadó',  'A', '130503'),
+    ('QBO', 'Quibdó',    'Q', '130504');
+
+-- Operaciones
+INSERT INTO operaciones (codigo, sede_id, aliado, letra_aliado, tipo_erp) VALUES
+    ('DA',(SELECT id FROM sedes WHERE codigo='DMA'),'ALPINA',   'A','SIDIS'),
+    ('DC',(SELECT id FROM sedes WHERE codigo='DMA'),'CARNICOS', 'C','ECOM'),
+    ('DF',(SELECT id FROM sedes WHERE codigo='DMA'),'FAMILIA',  'F','SIDIS'),
+    ('CA',(SELECT id FROM sedes WHERE codigo='CAC'),'ALPINA',   'A','ECOM'),
+    ('CC',(SELECT id FROM sedes WHERE codigo='CAC'),'CARNICOS', 'C','ECOM'),
+    ('CN',(SELECT id FROM sedes WHERE codigo='CAC'),'NUTRESA',  'N','ECOM'),
+    ('AA',(SELECT id FROM sedes WHERE codigo='APA'),'ALPINA',   'A','SIDIS'),
+    ('QC',(SELECT id FROM sedes WHERE codigo='QBO'),'CARNICOS', 'C','ECOM'),
+    ('QN',(SELECT id FROM sedes WHERE codigo='QBO'),'NUTRESA',  'N','ECOM'),
+    ('QM',(SELECT id FROM sedes WHERE codigo='QBO'),'MEALS',    'M','ECOM');
+
+-- Bancos
+INSERT INTO bancos (id, nombre, tipo) VALUES
+    (1, 'Bancolombia',              'EXTERNO'),
+    (2, 'Banco de Bogotá',          'EXTERNO'),
+    (3, 'Davivienda',               'EXTERNO'),
+    (4, 'CFA',                      'EXTERNO'),
+    (5, 'Banco Agrario',            'EXTERNO'),
+    (6, 'AV Villas',                'EXTERNO'),
+    (7, 'Bancolombia Ahorros RIO',  'RIOGRANDE'),
+    (8, 'Bancolombia Corriente RIO','RIOGRANDE'),
+    (9, 'CFA RIO',                  'RIOGRANDE');
+
+-- Consecutivos (uno por sede)
+INSERT INTO consecutivos_cuadre (sede_id, fecha, ultimo_numero)
+SELECT id, current_date, 0 FROM sedes;
+
+-- Parámetros del sistema
+INSERT INTO parametros_sistema (clave, valor, descripcion) VALUES
+    ('MARGEN_DIAS_ANTES',          '3',     'Días antes de hoy para buscar consignaciones'),
+    ('MARGEN_DIAS_DESPUES',        '1',     'Días después de hoy para buscar consignaciones'),
+    ('TIMEOUT_SESION_MINUTOS',     '30',    'Minutos antes de liberar bloqueos de consignaciones'),
+    ('HORA_SYNC_AUTOMATICA',       '06:00', 'Hora de sincronización automática desde SharePoint'),
+    ('MAX_DIAS_SIN_APROBAR',       '2',     'Máximo de días sin aprobar antes de bloquear a la auxiliar'),
+    ('RUTA_SOPORTES_DMA',          'C:\RioTesoreria\Soportes\DMA\', 'Ruta local soportes Donmatías'),
+    ('RUTA_SOPORTES_CAC',          'C:\RioTesoreria\Soportes\CAC\', 'Ruta local soportes Caucasia'),
+    ('RUTA_SOPORTES_APA',          'C:\RioTesoreria\Soportes\APA\', 'Ruta local soportes Apartadó'),
+    ('RUTA_SOPORTES_QBO',          'C:\RioTesoreria\Soportes\QBO\', 'Ruta local soportes Quibdó'),
+    ('INGESTA_MANUAL_ACTIVA',      'true',  'Habilita botón de ingesta manual en SharePoint'),
+    ('INGESTA_AUTOMATICA_ACTIVA',  'false', 'Habilita ingesta automática programada'),
+    ('SYNC_ODOO_MANUAL_ACTIVA',    'true',  'Habilita botones de sync manual con Odoo'),
+    ('SYNC_ODOO_AUTOMATICA_ACTIVA','false', 'Habilita sync automática con Odoo');
+
+-- ============================================================
+-- FIN DEL SCRIPT
+-- ============================================================
+-- Resumen:
+-- Tablas maestras y parámetros:  9
+-- Tablas de terceros:             2  (clientes, proveedores)
+-- Tablas de ingesta:              4  (documentos_erp, documentos_dian,
+--                                     consignaciones_banco, consignaciones_aliados)
+-- Tablas operativas cuadre:       4  (cuadres, cuadre_retenciones,
+--                                     gastos, cuadre_anticipos_nomina)
+-- Tablas operativas recaudo:      4  (recaudos_dia, destinos_efectivo,
+--                                     soportes_dia, checklist_revision)
+-- Asientos contables:             1
+-- Tablas históricas:             14
+-- Audit log:                      1
+-- TOTAL:                         39 tablas
+--
+-- Funciones:                      8
+-- Triggers:                      ~45
+-- ============================================================

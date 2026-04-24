@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { facturasMock, gastosMock, anticiposMock, planillasMock, aliados, bancos, empleados, tiposGasto, tiposRetencion } from '@/data/mockData';
+import { facturasMock, planillasMock, bancos, empleados, tiposRetencion } from '@/data/mockData';
 import { formatCurrency } from '@/lib/format';
 import { useAppStore } from '@/store/appStore';
 import { Plus, Trash2, AlertTriangle, Check, Paperclip, ChevronRight, X } from 'lucide-react';
@@ -73,6 +73,108 @@ const anticiposMock21 = [
   { planilla: 'DA-32937', numero: 'ANT-00046', cliente: 'Supermercado Norte', valor: -200000 },
 ];
 
+// ── §2.2 — Tipos y catálogos locales ────────────────────────────────────────
+
+interface GastoRuta22 {
+  id: string;
+  tipoGastoId: string;
+  tipoGastoNombre: string;
+  requiereDocElec: boolean;
+  topeMaximo: number;
+  proveedorNit: string;
+  proveedorNombre: string;
+  nFactura: string;
+  cuentaAnaliticaId: string;
+  cuentaAnaliticaNombre: string;
+  tarifaIva: number;
+  retencionId: string;
+  retencionNombre: string;
+  retencionPct: number;
+  valorBase: number;
+  superaTope: boolean;
+  justificacion: string;
+}
+
+interface Proveedor22 {
+  id: string;
+  nit: string;
+  nombre: string;
+  tipoTercero: 'Natural' | 'Jurídico';
+  tipoIdentificacion: string;
+  sincronizado_odoo: boolean;
+}
+
+const parametrosGasto22 = [
+  { id: 'g1', nombre_asiento: 'Peajes',               requiere_documento_electronico: true,  tope_maximo: 50000  },
+  { id: 'g2', nombre_asiento: 'Combustible',           requiere_documento_electronico: true,  tope_maximo: 100000 },
+  { id: 'g3', nombre_asiento: 'Alimentación',          requiere_documento_electronico: false, tope_maximo: 50000  },
+  { id: 'g4', nombre_asiento: 'Mantenimiento vehículo',requiere_documento_electronico: true,  tope_maximo: 80000  },
+  { id: 'g5', nombre_asiento: 'Parqueadero',           requiere_documento_electronico: false, tope_maximo: 30000  },
+];
+
+const proveedoresInit: Proveedor22[] = [
+  { id: 'p1', nit: '900123456', nombre: 'Concesión Vial 4G', tipoTercero: 'Jurídico', tipoIdentificacion: 'NIT', sincronizado_odoo: true },
+  { id: 'p2', nit: '900456789', nombre: 'EDS El Nogal',      tipoTercero: 'Jurídico', tipoIdentificacion: 'NIT', sincronizado_odoo: true },
+  { id: 'p3', nit: '800111333', nombre: 'Parqueadero Central',tipoTercero: 'Jurídico', tipoIdentificacion: 'NIT', sincronizado_odoo: true },
+];
+
+const cuentasAnaliticas22 = [
+  { id: 'ca1', nombre: 'DMA-Alpina 100%'           },
+  { id: 'ca2', nombre: 'DMA-Alpina+Cárnicos 50/50' },
+  { id: 'ca3', nombre: 'DMA-Cárnicos 100%'         },
+];
+
+const ivasDisponibles = [
+  { pct: 0,  label: '0%'  },
+  { pct: 5,  label: '5%'  },
+  { pct: 19, label: '19%' },
+];
+
+const retencionesProveedor = [
+  { id: 'r1', nombre: 'Retefte 2.5%',  pct: 2.5   },
+  { id: 'r2', nombre: 'Retefte 3.5%',  pct: 3.5   },
+  { id: 'r3', nombre: 'Reteica 0.414%',pct: 0.414 },
+];
+
+const gastosMock22: GastoRuta22[] = [
+  {
+    id: 'g22-1', tipoGastoId: 'g1', tipoGastoNombre: 'Peajes',
+    requiereDocElec: true, topeMaximo: 50000,
+    proveedorNit: '900123456', proveedorNombre: 'Concesión Vial 4G',
+    nFactura: 'FE-001', cuentaAnaliticaId: 'ca1', cuentaAnaliticaNombre: 'DMA-Alpina 100%',
+    tarifaIva: 19, retencionId: '', retencionNombre: '', retencionPct: 0,
+    valorBase: 25000, superaTope: false, justificacion: '',
+  },
+  {
+    id: 'g22-2', tipoGastoId: 'g2', tipoGastoNombre: 'Combustible',
+    requiereDocElec: true, topeMaximo: 100000,
+    proveedorNit: '900456789', proveedorNombre: 'EDS El Nogal',
+    nFactura: 'FE-002', cuentaAnaliticaId: 'ca2', cuentaAnaliticaNombre: 'DMA-Alpina+Cárnicos 50/50',
+    tarifaIva: 5, retencionId: 'r1', retencionNombre: 'Retefte 2.5%', retencionPct: 2.5,
+    valorBase: 80000, superaTope: false, justificacion: '',
+  },
+];
+
+// ── §2.6 — Anticipos de nómina ──
+type Concepto26 = 'ANT_NOMINA' | 'PASAJE' | 'ANT_VIATICOS';
+const conceptoLabels: Record<Concepto26, string> = {
+  ANT_NOMINA:   'Anticipo de nómina',
+  PASAJE:       'Pasaje',
+  ANT_VIATICOS: 'Anticipo viáticos',
+};
+interface AnticipoNomina26 {
+  id: string;
+  empleado: string;
+  concepto: Concepto26;
+  cuentaAnaliticaId: string;
+  cuentaAnaliticaNombre: string;
+  valor: number;
+}
+const anticiposMock26: AnticipoNomina26[] = [
+  { id: 'an1', empleado: 'Juan García',  concepto: 'ANT_NOMINA',   cuentaAnaliticaId: 'ca1', cuentaAnaliticaNombre: 'DMA-Alpina 100%',           valor: 70000  },
+  { id: 'an2', empleado: 'Carlos López', concepto: 'ANT_VIATICOS', cuentaAnaliticaId: 'ca2', cuentaAnaliticaNombre: 'DMA-Alpina+Cárnicos 50/50', valor: 150000 },
+];
+
 const steps = ['Tripulación', 'Facturas', 'Gastos ruta', 'Consig. Riogrande', 'Consig. Aliados', 'Efectivo', 'Anticipos', 'Resumen'];
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -88,8 +190,8 @@ const CuadrePlanillas = () => {
   const [placa,      setPlaca]      = useState('NTB-432');
 
   // ── Gastos / anticipos nómina ──
-  const [gastos,    setGastos]    = useState(gastosMock);
-  const [anticipos, setAnticipos] = useState(anticiposMock);
+  const [gastos22, setGastos22] = useState<GastoRuta22[]>(gastosMock22);
+  const [anticipos26, setAnticipos26] = useState<AnticipoNomina26[]>(anticiposMock26);
 
   // ── Sección 2.3 — Consig. Riogrande ──
   const [consigDisponibles]    = useState<ConsigDisponible[]>(consigDisponiblesMock);
@@ -130,6 +232,18 @@ const CuadrePlanillas = () => {
 
   // ── Modal confirm ──
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // ── §2.2 state ──
+  const [proveedores22, setProveedores22] = useState<Proveedor22[]>(proveedoresInit);
+  const [provSearch, setProvSearch] = useState<Record<string, string>>({});
+  const [provDropOpen, setProvDropOpen] = useState<string | null>(null);
+  const [showModalProv, setShowModalProv] = useState(false);
+  const [modalProvGastoId, setModalProvGastoId] = useState<string | null>(null);
+  const [nuevoNit, setNuevoNit]     = useState('');
+  const [nuevoDigito, setNuevoDigito] = useState('');
+  const [nuevoNombre, setNuevoNombre] = useState('');
+  const [nuevoTipo, setNuevoTipo]   = useState<'Natural'|'Jurídico'>('Jurídico');
+  const [nuevoTipoId, setNuevoTipoId] = useState('NIT');
   const [retencionRow, setRetencionRow] = useState<string | null>(null);
 
   // ── Cálculos ──
@@ -137,14 +251,18 @@ const CuadrePlanillas = () => {
 
   const totalContado      = facturasMock.filter(f => f.crco === 'CONTADO').reduce((s, f) => s + f.totalCuadrar, 0);
   const totalAnticipos21  = anticiposMock21.reduce((s, a) => s + a.valor, 0); // neto (puede ser < 0)
-  const totalGastos       = gastos.reduce((s, g) => s + g.total, 0);
+  const totalGastos = gastos22.reduce((s, g) => {
+    const iva = Math.round(g.valorBase * g.tarifaIva / 100);
+    const ret = Math.round(g.valorBase * g.retencionPct / 100);
+    return s + g.valorBase + iva - ret;
+  }, 0);
   const totalConsigRio    = consigSeleccionadas.reduce((s, c) => s + c.valor, 0);
   const totalConsigAli    = (() => {
     if (aliadoActivo === 'Alpina') return consigAlpina.reduce((s, c) => s + c.valor, 0);
     const cert = certSeleccionadas[aliadoActivo] || [];
     return cert.reduce((s, c) => s + c.valor, 0);
   })();
-  const totalAnticipos    = anticipos.reduce((s, a) => s + a.valor, 0);
+  const totalAnticipos    = anticipos26.reduce((s, a) => s + a.valor, 0);
   const efectivoTeorico   = totalContado + totalAnticipos21 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos;
   const diferencia        = efectivoReal - efectivoTeorico;
   const aprovechamientos  = diferencia > 0 ? diferencia : 0;
@@ -350,68 +468,326 @@ const CuadrePlanillas = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">2.2 — Gastos de ruta</h3>
           <button
-            onClick={() => setGastos([...gastos, { id: String(Date.now()), nit: '', nombre: '', tipoGasto: tiposGasto[0], valorBase: 0, iva: 0, total: 0, superaTope: false, justificacion: '' }])}
-            className="flex items-center gap-2 text-sm text-primary hover:bg-accent px-3 py-1.5 rounded-md"
+            onClick={() => {
+              const primerTipo = parametrosGasto22[0];
+              setGastos22(prev => [...prev, {
+                id: String(Date.now()),
+                tipoGastoId: primerTipo.id, tipoGastoNombre: primerTipo.nombre_asiento,
+                requiereDocElec: primerTipo.requiere_documento_electronico, topeMaximo: primerTipo.tope_maximo,
+                proveedorNit: '', proveedorNombre: '', nFactura: '',
+                cuentaAnaliticaId: cuentasAnaliticas22[0].id, cuentaAnaliticaNombre: cuentasAnaliticas22[0].nombre,
+                tarifaIva: 0, retencionId: '', retencionNombre: '', retencionPct: 0,
+                valorBase: 0, superaTope: false, justificacion: '',
+              }]);
+            }}
+            className="flex items-center gap-2 text-sm text-primary hover:bg-accent px-3 py-1.5 rounded-md transition-colors"
           >
             <Plus className="h-4 w-4" /> Agregar gasto
           </button>
         </div>
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
+
+        <div className="bg-card rounded-lg border border-border overflow-x-auto">
+          <table className="w-full text-xs" style={{ minWidth: '1100px' }}>
             <thead>
               <tr className="bg-muted/70">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">NIT</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nombre</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tipo</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Valor base</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">IVA</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
-                <th className="px-4 py-3 w-10"></th>
+                <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Tipo de gasto</th>
+                <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Proveedor</th>
+                <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">N° Factura</th>
+                <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Cuenta analítica</th>
+                <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Tarifa IVA</th>
+                <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Retención</th>
+                <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Valor base</th>
+                <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">IVA</th>
+                <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Retención $</th>
+                <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Total</th>
+                <th className="px-2 py-3 w-8"></th>
               </tr>
             </thead>
             <tbody>
-              {gastos.map((g, i) => (
-                <tr key={g.id} className={`border-t border-border table-row-alt ${g.superaTope ? 'bg-warning/10' : ''}`}>
-                  <td className="px-4 py-2.5"><input defaultValue={g.nit} className="border border-input rounded px-2 py-1 w-28 bg-background text-sm" /></td>
-                  <td className="px-4 py-2.5"><input defaultValue={g.nombre} className="border border-input rounded px-2 py-1 w-full bg-background text-sm" /></td>
-                  <td className="px-4 py-2.5">
-                    <select defaultValue={g.tipoGasto} className="border border-input rounded px-2 py-1 bg-background text-sm">
-                      {tiposGasto.map(t => <option key={t}>{t}</option>)}
-                    </select>
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-mono">{formatCurrency(g.valorBase)}</td>
-                  <td className="px-4 py-2.5 text-right font-mono">{formatCurrency(g.iva)}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-medium">
-                    {g.superaTope && <AlertTriangle className="h-3.5 w-3.5 text-warning inline mr-1" />}
-                    {formatCurrency(g.total)}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <button onClick={() => setGastos(gastos.filter((_, j) => j !== i))} className="text-destructive hover:bg-destructive/10 rounded p-1">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {gastos.some(g => g.superaTope) && (
-                <tr className="border-t border-warning/30 bg-warning/5">
-                  <td colSpan={7} className="px-4 py-2.5">
-                    <div className="flex items-center gap-2 text-sm">
-                      <AlertTriangle className="h-4 w-4 text-warning" />
-                      <span className="text-foreground font-medium">Gasto supera tope — justificación requerida:</span>
-                      <input placeholder="Escribir justificación..." className="flex-1 border border-warning/50 rounded px-2 py-1 bg-background text-sm" />
-                    </div>
-                  </td>
-                </tr>
-              )}
+              {gastos22.map((g) => {
+                const ivaCalc  = Math.round(g.valorBase * g.tarifaIva / 100);
+                const retCalc  = Math.round(g.valorBase * g.retencionPct / 100);
+                const total    = g.valorBase + ivaCalc - retCalc;
+                const superaTope = total > g.topeMaximo;
+                const searchVal = provSearch[g.id] ?? `${g.proveedorNombre}${g.proveedorNombre && g.proveedorNit ? ' / ' : ''}${g.proveedorNit}`;
+                const filteredProvs = proveedores22.filter(p =>
+                  p.nombre.toLowerCase().includes((provSearch[g.id] || '').toLowerCase()) ||
+                  p.nit.includes(provSearch[g.id] || '')
+                );
+                const noMatch = (provSearch[g.id] || '').length > 1 && filteredProvs.length === 0;
+
+                const updateG = (patch: Partial<GastoRuta22>) =>
+                  setGastos22(prev => prev.map(x => x.id === g.id ? { ...x, ...patch } : x));
+
+                return (
+                  <>
+                    <tr key={g.id} className={`border-t border-border transition-colors ${superaTope ? 'bg-red-50 dark:bg-red-900/15' : 'hover:bg-muted/30'}`}>
+
+                      {/* 1. TIPO DE GASTO */}
+                      <td className="px-2 py-2">
+                        <select
+                          value={g.tipoGastoId}
+                          onChange={e => {
+                            const t = parametrosGasto22.find(x => x.id === e.target.value)!;
+                            updateG({ tipoGastoId: t.id, tipoGastoNombre: t.nombre_asiento, requiereDocElec: t.requiere_documento_electronico, topeMaximo: t.tope_maximo });
+                          }}
+                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-40 focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          {parametrosGasto22.map(t => <option key={t.id} value={t.id}>{t.nombre_asiento}</option>)}
+                        </select>
+                      </td>
+
+                      {/* 2. PROVEEDOR */}
+                      <td className="px-2 py-2">
+                        <div className="relative">
+                          <div className="flex items-center gap-1">
+                            <input
+                              value={searchVal}
+                              onChange={e => {
+                                setProvSearch(prev => ({ ...prev, [g.id]: e.target.value }));
+                                setProvDropOpen(g.id);
+                              }}
+                              onFocus={() => setProvDropOpen(g.id)}
+                              onBlur={() => setTimeout(() => setProvDropOpen(null), 200)}
+                              placeholder="Buscar por nombre o NIT…"
+                              className="border border-input rounded px-1.5 py-1 bg-background text-xs w-44 focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            {noMatch && (
+                              <button
+                                onMouseDown={e => { e.preventDefault(); setModalProvGastoId(g.id); setShowModalProv(true); setNuevoNit(provSearch[g.id] || ''); setNuevoDigito(''); setNuevoNombre(''); }}
+                                className="flex items-center justify-center w-6 h-6 rounded bg-primary text-primary-foreground hover:opacity-80 shrink-0"
+                                title="Crear nuevo proveedor"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                          {provDropOpen === g.id && filteredProvs.length > 0 && (
+                            <div className="absolute z-20 top-full left-0 mt-1 bg-card border border-border rounded shadow-lg w-64 max-h-40 overflow-y-auto">
+                              {filteredProvs.map(p => (
+                                <button
+                                  key={p.id}
+                                  onMouseDown={e => { e.preventDefault(); }}
+                                  onClick={() => {
+                                    updateG({ proveedorNit: p.nit, proveedorNombre: p.nombre });
+                                    setProvSearch(prev => ({ ...prev, [g.id]: `${p.nombre} / ${p.nit}` }));
+                                    setProvDropOpen(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-accent text-xs flex flex-col"
+                                >
+                                  <span className="font-medium">{p.nombre}</span>
+                                  <span className="text-muted-foreground">{p.nit}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* 3. N° FACTURA — condicional */}
+                      <td className="px-2 py-2">
+                        {g.requiereDocElec ? (
+                          <input
+                            value={g.nFactura}
+                            onChange={e => updateG({ nFactura: e.target.value })}
+                            placeholder="N° factura *"
+                            className="border border-input rounded px-1.5 py-1 bg-background text-xs w-24 focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* 4. CUENTA ANALÍTICA */}
+                      <td className="px-2 py-2">
+                        <select
+                          value={g.cuentaAnaliticaId}
+                          onChange={e => {
+                            const ca = cuentasAnaliticas22.find(x => x.id === e.target.value)!;
+                            updateG({ cuentaAnaliticaId: ca.id, cuentaAnaliticaNombre: ca.nombre });
+                          }}
+                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-48 focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          {cuentasAnaliticas22.map(ca => <option key={ca.id} value={ca.id}>{ca.nombre}</option>)}
+                        </select>
+                      </td>
+
+                      {/* 5. TARIFA IVA */}
+                      <td className="px-2 py-2">
+                        <select
+                          value={g.tarifaIva}
+                          onChange={e => updateG({ tarifaIva: Number(e.target.value) })}
+                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-20 focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          {ivasDisponibles.map(i => <option key={i.pct} value={i.pct}>{i.label}</option>)}
+                        </select>
+                      </td>
+
+                      {/* 6. RETENCIÓN PROVEEDOR — nullable */}
+                      <td className="px-2 py-2">
+                        <select
+                          value={g.retencionId}
+                          onChange={e => {
+                            if (!e.target.value) { updateG({ retencionId: '', retencionNombre: '', retencionPct: 0 }); return; }
+                            const r = retencionesProveedor.find(x => x.id === e.target.value)!;
+                            updateG({ retencionId: r.id, retencionNombre: r.nombre, retencionPct: r.pct });
+                          }}
+                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-36 focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="">— Sin retención</option>
+                          {retencionesProveedor.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                        </select>
+                      </td>
+
+                      {/* 7. VALOR BASE */}
+                      <td className="px-2 py-2">
+                        <input
+                          type="text"
+                          value={g.valorBase === 0 ? '' : g.valorBase.toLocaleString('es-CO')}
+                          onChange={e => {
+                            const v = parseInt(e.target.value.replace(/\D/g, '')) || 0;
+                            updateG({ valorBase: v });
+                          }}
+                          placeholder="0"
+                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-28 text-right font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </td>
+
+                      {/* 8. IVA — calculado, visible si tarifaIva > 0 */}
+                      <td className="px-2 py-2 text-right font-mono">
+                        {g.tarifaIva > 0 ? (
+                          <span className="text-blue-600 dark:text-blue-400">{formatCurrency(ivaCalc)}</span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+
+                      {/* 9. RETENCIÓN $ — calculado, visible si hay retención */}
+                      <td className="px-2 py-2 text-right font-mono">
+                        {g.retencionId ? (
+                          <span className="text-amber-600 dark:text-amber-400">−{formatCurrency(retCalc)}</span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+
+                      {/* 10. TOTAL — solo lectura */}
+                      <td className="px-2 py-2 text-right font-mono font-semibold">
+                        {superaTope && <AlertTriangle className="h-3 w-3 text-red-500 inline mr-1" />}
+                        <span className={superaTope ? 'text-red-600 dark:text-red-400' : 'text-foreground'}>
+                          {formatCurrency(total)}
+                        </span>
+                      </td>
+
+                      {/* DELETE */}
+                      <td className="px-2 py-2">
+                        <button
+                          onClick={() => setGastos22(prev => prev.filter(x => x.id !== g.id))}
+                          className="text-destructive hover:bg-destructive/10 rounded p-1 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* ALERTA DE TOPE — fila de justificación */}
+                    {superaTope && (
+                      <tr key={`tope-${g.id}`} className="bg-red-50 dark:bg-red-900/10 border-t border-red-200 dark:border-red-800/40">
+                        <td colSpan={11} className="px-3 py-2">
+                          <div className="flex items-center gap-2 text-xs">
+                            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                            <span className="font-medium text-red-700 dark:text-red-400 whitespace-nowrap">
+                              ⚠ Total supera tope máximo ({formatCurrency(g.topeMaximo)}) — justificación obligatoria:
+                            </span>
+                            <input
+                              value={g.justificacion}
+                              onChange={e => updateG({ justificacion: e.target.value })}
+                              placeholder="Escribir justificación…"
+                              className="flex-1 border border-red-400 dark:border-red-600 rounded px-2 py-1 bg-background text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
+
+              {/* TOTAL GASTOS */}
               <tr className="border-t-2 border-primary/20 bg-accent">
-                <td colSpan={5} className="px-4 py-3 font-semibold">TOTAL GASTOS</td>
-                <td className="px-4 py-3 text-right font-mono font-bold">{formatCurrency(totalGastos)}</td>
+                <td colSpan={9} className="px-3 py-3 font-semibold text-sm">TOTAL GASTOS</td>
+                <td className="px-2 py-3 text-right font-mono font-bold text-sm">{formatCurrency(totalGastos)}</td>
                 <td></td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
+
+      {/* ── Modal: Nuevo proveedor ── */}
+      {showModalProv && (
+        <div className="fixed inset-0 bg-foreground/40 flex items-center justify-center z-50" onClick={() => setShowModalProv(false)}>
+          <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-md animate-fade-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h4 className="text-base font-bold text-foreground">Nuevo proveedor</h4>
+              <button onClick={() => setShowModalProv(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">NIT <span className="text-destructive">*</span></label>
+                  <input value={nuevoNit} onChange={e => setNuevoNit(e.target.value)} placeholder="900123456" className="w-full border border-input rounded px-2.5 py-1.5 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Dígito V.</label>
+                  <input value={nuevoDigito} onChange={e => setNuevoDigito(e.target.value)} placeholder="0" maxLength={1} className="w-full border border-input rounded px-2.5 py-1.5 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Nombre / Razón social <span className="text-destructive">*</span></label>
+                <input value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} placeholder="Nombre del proveedor" className="w-full border border-input rounded px-2.5 py-1.5 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Tipo tercero</label>
+                  <select value={nuevoTipo} onChange={e => setNuevoTipo(e.target.value as 'Natural'|'Jurídico')} className="w-full border border-input rounded px-2.5 py-1.5 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option>Natural</option>
+                    <option>Jurídico</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Tipo identificación</label>
+                  <select value={nuevoTipoId} onChange={e => setNuevoTipoId(e.target.value)} className="w-full border border-input rounded px-2.5 py-1.5 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option>NIT</option>
+                    <option>CC</option>
+                    <option>CE</option>
+                    <option>Pasaporte</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-3 py-2">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                Pendiente sincronización con Odoo
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setShowModalProv(false)} className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-md transition-colors">Cancelar</button>
+              <button
+                disabled={!nuevoNit || !nuevoNombre}
+                onClick={() => {
+                  const nuevo: Proveedor22 = { id: String(Date.now()), nit: nuevoNit, nombre: nuevoNombre, tipoTercero: nuevoTipo, tipoIdentificacion: nuevoTipoId, sincronizado_odoo: false };
+                  setProveedores22(prev => [...prev, nuevo]);
+                  if (modalProvGastoId) {
+                    setGastos22(prev => prev.map(x => x.id === modalProvGastoId ? { ...x, proveedorNit: nuevo.nit, proveedorNombre: nuevo.nombre } : x));
+                    setProvSearch(prev => ({ ...prev, [modalProvGastoId]: `${nuevo.nombre} / ${nuevo.nit}` }));
+                  }
+                  setShowModalProv(false);
+                  setNuevoNit(''); setNuevoDigito(''); setNuevoNombre(''); setNuevoTipo('Jurídico'); setNuevoTipoId('NIT');
+                }}
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Guardar proveedor
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── §2.3 Consignaciones Riogrande — Selector ── */}
       <section className="mb-8">
@@ -729,8 +1105,15 @@ const CuadrePlanillas = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">2.6 — Anticipos de nómina</h3>
           <button
-            onClick={() => setAnticipos([...anticipos, { id: String(Date.now()), fecha: '11/04/2026', empleado: empleados[0], concepto: 'Anticipo nómina', valor: 0, soporte: false }])}
-            className="flex items-center gap-2 text-sm text-primary hover:bg-accent px-3 py-1.5 rounded-md"
+            onClick={() => setAnticipos26(prev => [...prev, {
+              id: String(Date.now()),
+              empleado: empleados[0],
+              concepto: 'ANT_NOMINA',
+              cuentaAnaliticaId: cuentasAnaliticas22[0].id,
+              cuentaAnaliticaNombre: cuentasAnaliticas22[0].nombre,
+              valor: 0,
+            }])}
+            className="flex items-center gap-2 text-sm text-primary hover:bg-accent px-3 py-1.5 rounded-md transition-colors"
           >
             <Plus className="h-4 w-4" /> Agregar anticipo
           </button>
@@ -739,48 +1122,88 @@ const CuadrePlanillas = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/70">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Empleado</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Concepto</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cuenta analítica</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Valor</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">N° Denuncia</th>
-                <th className="text-center px-4 py-3 font-medium text-muted-foreground">Soporte</th>
+                <th className="px-4 py-3 w-10"></th>
               </tr>
             </thead>
             <tbody>
-              {anticipos.map((a) => (
-                <tr key={a.id} className={`border-t border-border table-row-alt ${a.concepto === 'Hurto en ruta' ? 'bg-destructive/5' : ''}`}>
-                  <td className="px-4 py-2.5">{a.fecha}</td>
-                  <td className="px-4 py-2.5">
-                    <select defaultValue={a.empleado} className="border border-input rounded px-2 py-1 bg-background text-sm">
-                      {empleados.map(e => <option key={e}>{e}</option>)}
-                    </select>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <select defaultValue={a.concepto} className="border border-input rounded px-2 py-1 bg-background text-sm">
-                      <option>Anticipo nómina</option>
-                      <option>Pasaje</option>
-                      <option>Hurto en ruta</option>
-                    </select>
-                    {a.concepto === 'Hurto en ruta' && <span className="badge-error ml-2">Pendiente autorización</span>}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-mono font-medium">{formatCurrency(a.valor)}</td>
-                  <td className="px-4 py-2.5">
-                    {a.concepto === 'Hurto en ruta'
-                      ? <input defaultValue={a.numDenuncia || ''} placeholder="N° denuncia" className="border border-input rounded px-2 py-1 w-28 bg-background text-sm" />
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-2.5 text-center">
-                    {a.soporte ? <Check className="h-4 w-4 text-success mx-auto" /> : (
-                      <button className="flex items-center gap-1 text-xs text-primary mx-auto"><Paperclip className="h-3.5 w-3.5" /> Adjuntar</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {anticipos26.map((a) => {
+                const updateA = (patch: Partial<AnticipoNomina26>) =>
+                  setAnticipos26(prev => prev.map(x => x.id === a.id ? { ...x, ...patch } : x));
+                return (
+                  <tr key={a.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+
+                    {/* 1. EMPLEADO */}
+                    <td className="px-4 py-2.5">
+                      <select
+                        value={a.empleado}
+                        onChange={e => updateA({ empleado: e.target.value })}
+                        className="border border-input rounded px-2 py-1 bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        {empleados.map(e => <option key={e}>{e}</option>)}
+                      </select>
+                    </td>
+
+                    {/* 2. CONCEPTO */}
+                    <td className="px-4 py-2.5">
+                      <select
+                        value={a.concepto}
+                        onChange={e => updateA({ concepto: e.target.value as Concepto26 })}
+                        className="border border-input rounded px-2 py-1 bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        {(Object.keys(conceptoLabels) as Concepto26[]).map(k => (
+                          <option key={k} value={k}>{conceptoLabels[k]}</option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* 3. CUENTA ANALÍTICA */}
+                    <td className="px-4 py-2.5">
+                      <select
+                        value={a.cuentaAnaliticaId}
+                        onChange={e => {
+                          const ca = cuentasAnaliticas22.find(x => x.id === e.target.value)!;
+                          updateA({ cuentaAnaliticaId: ca.id, cuentaAnaliticaNombre: ca.nombre });
+                        }}
+                        className="border border-input rounded px-2 py-1 bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        {cuentasAnaliticas22.map(ca => <option key={ca.id} value={ca.id}>{ca.nombre}</option>)}
+                      </select>
+                    </td>
+
+                    {/* 4. VALOR */}
+                    <td className="px-4 py-2.5 text-right">
+                      <input
+                        type="text"
+                        value={a.valor === 0 ? '' : a.valor.toLocaleString('es-CO')}
+                        onChange={e => {
+                          const v = parseInt(e.target.value.replace(/\D/g, '')) || 0;
+                          updateA({ valor: v });
+                        }}
+                        placeholder="0"
+                        className="border border-input rounded px-2 py-1 bg-background text-sm w-32 text-right font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </td>
+
+                    {/* DELETE */}
+                    <td className="px-4 py-2.5">
+                      <button
+                        onClick={() => setAnticipos26(prev => prev.filter(x => x.id !== a.id))}
+                        className="text-destructive hover:bg-destructive/10 rounded p-1 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
               <tr className="border-t-2 border-primary/20 bg-accent">
-                <td colSpan={3} className="px-4 py-3 font-semibold">TOTAL</td>
-                <td className="px-4 py-3 text-right font-mono font-bold">{formatCurrency(anticipos.reduce((s, a) => s + a.valor, 0))}</td>
-                <td colSpan={2}></td>
+                <td colSpan={3} className="px-4 py-3 font-semibold">TOTAL ANTICIPOS</td>
+                <td className="px-4 py-3 text-right font-mono font-bold">{formatCurrency(totalAnticipos)}</td>
+                <td></td>
               </tr>
             </tbody>
           </table>

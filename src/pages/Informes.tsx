@@ -16,6 +16,11 @@ const tabs = [
   'Consignaciones Banco',
   'Consignaciones Aliados',
   'Auditoría Máximo Detalle',
+  'Plano Documentos ERP',
+  'Estado Documentos ERP',
+  'Conciliación ERP vs DIAN',
+  'Documentos listos para Odoo',
+  'Asientos Contables',
 ];
 
 // ─── Mock data nuevos informes ────────────────────────────────────────────────
@@ -63,6 +68,34 @@ const TIPOS_MOV = [
   'CONSIGNACION_ALIADO','ANTICIPO_NOMINA','HURTO_RUTA','DESTINO_EFECTIVO','HURTO_BODEGA',
 ];
 
+const estadoDocMock = [
+  { operacion: 'DA', planilla: 'DA-32926', documento: 'DMA779121', tipo: 'FAC. VENTA', fecha: '19/04/2026', crco: 'CONTADO', cliente: 'Tienda El Sol', base: 254510, iva: 48357, total: 303156, estadoAnalista: 'APROBADO', estadoDian: 'APROBADO_CON_NOTIFICACION', validadoDian: '20/04/2026' },
+  { operacion: 'DA', planilla: 'DA-32926', documento: 'DMA779122', tipo: 'NOTA CRÉDITO', fecha: '19/04/2026', crco: 'CONTADO', cliente: 'Tienda El Sol', base: -12605, iva: -2395, total: -15000, estadoAnalista: 'APROBADO', estadoDian: 'APROBADO_CON_NOTIFICACION', validadoDian: '20/04/2026' },
+  { operacion: 'DC', planilla: 'DC-11201', documento: 'DMA779130', tipo: 'FAC. VENTA', fecha: '19/04/2026', crco: 'CREDITO', cliente: 'Tienda Mixta', base: 180000, iva: 0, total: 180000, estadoAnalista: 'ENVIADO_REVISION', estadoDian: 'SIN_VALIDAR', validadoDian: '—' },
+];
+
+const concilNotDianMock = [
+  { operacion: 'DA', planilla: 'DA-32926', documento: 'DMA779135', tipo: 'FAC. VENTA', fecha: '18/04/2026', cliente: 'Tienda Nogales', total: 89500, estadoAnalista: 'APROBADO' },
+  { operacion: 'DC', planilla: 'DC-11201', documento: 'DMA779140', tipo: 'NOTA CRÉDITO', fecha: '17/04/2026', cliente: 'Minimercado LP', total: -25000, estadoAnalista: 'APROBADO' },
+];
+
+const concilNotERPMock = [
+  { documento: 'DMA779150', prefijo: 'DMA', folio: '779150', tipo: 'FAC. VENTA', fecha: '16/04/2026', base: 50000, iva: 9500, total: 59500, estadoDian: 'APROBADO_CON_NOTIFICACION' },
+];
+
+const docsOdooMock = [
+  { operacion: 'DA', planilla: 'DA-32926', documento: 'DMA779121', tipo: 'FAC. VENTA', fecha: '19/04/2026', cliente: 'Tienda El Sol', total: 303156, estadoDian: 'APROBADO_CON_NOTIFICACION', estadoEnvio: 'CONFIRMADO', enviado: '20/04/2026' },
+  { operacion: 'DA', planilla: 'DA-32926', documento: 'DMA779122', tipo: 'NOTA CRÉDITO', fecha: '19/04/2026', cliente: 'Tienda El Sol', total: -15000, estadoDian: 'APROBADO_CON_NOTIFICACION', estadoEnvio: 'ENVIADO', enviado: '20/04/2026' },
+  { operacion: 'DC', planilla: 'DC-11201', documento: 'DMA779131', tipo: 'FAC. VENTA', fecha: '19/04/2026', cliente: 'Tienda Mixta', total: 420000, estadoDian: 'APROBADO_CON_NOTIFICACION', estadoEnvio: 'PENDIENTE_ENVIO', enviado: '—' },
+];
+
+const asientosContablesMock = [
+  { fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'RETENCION_CLIENTE', debitoCta: '13551525', debitoAnalitica: '{"7":100}', creditoCta: '130501', creditoAnalitica: '—', diario: 'VDA', nit: '1039760460', nombre: 'Tienda El Sol', valor: 7578, estadoOdoo: 'PENDIENTE', error: '—' },
+  { fecha: '19/04/2026', referencia: 'FE-001', tipo: 'GASTO', debitoCta: '520101', debitoAnalitica: '{"7":100}', creditoCta: '130501', creditoAnalitica: '—', diario: 'VDA', nit: '900123456', nombre: 'Concesión Vial', valor: 29750, estadoOdoo: 'CONFIRMADO', error: '—' },
+  { fecha: '19/04/2026', referencia: 'DMA-RD-190426', tipo: 'CONSIGNACION_RG', debitoCta: '133131313', debitoAnalitica: '—', creditoCta: '130501', creditoAnalitica: '—', diario: 'VDA', nit: '811012258', nombre: 'DISTRIBUCIONES RIOGRANDE', valor: 3000000, estadoOdoo: 'ERROR', error: 'Diario no configurado' },
+  { fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'ANTICIPO_NOMINA', debitoCta: '2822222', debitoAnalitica: '{"7":100}', creditoCta: '130501', creditoAnalitica: '—', diario: 'VDA', nit: '98480254', nombre: 'Juan García', valor: 70000, estadoOdoo: 'PENDIENTE', error: '—' },
+];
+
 // ─── Helpers de badges ────────────────────────────────────────────────────────
 
 const badgeEstadoCB = (estado: string) => {
@@ -100,6 +133,30 @@ const badgeTipoMov = (tipo: string) => {
   return <span className={`px-1.5 py-0.5 rounded text-xs font-mono font-semibold ${cls}`}>{tipo}</span>;
 };
 
+const badgeEstadoAnalista = (estado: string) => {
+  const cls = estado === 'APROBADO' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+              estado === 'ENVIADO_REVISION' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400' :
+              estado === 'EN_CUADRE' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
+              'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  return <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{estado}</span>;
+};
+
+const badgeEstadoDIAN = (estado: string) => {
+  const cls = estado === 'APROBADO_CON_NOTIFICACION' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+              estado === 'RECHAZADO' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
+              estado === 'PENDIENTE' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400' :
+              'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  return <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{estado}</span>;
+};
+
+const badgeEstadoOdoo = (estado: string, errorMsg?: string) => {
+  const cls = estado === 'CONFIRMADO' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+              estado === 'ENVIADO' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
+              estado === 'ERROR' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
+              'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  return <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`} title={estado === 'ERROR' ? errorMsg : ''}>{estado}</span>;
+};
+
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 const Informes = () => {
@@ -113,7 +170,8 @@ const Informes = () => {
     );
   };
 
-  const isAuditoria = activeTab === 9;
+  const isCustomFilters = [9, 10, 11, 12, 13, 14].includes(activeTab);
+  const [concilTab, setConcilTab] = useState(0);
 
   return (
     <div className="p-8 animate-fade-in">
@@ -142,12 +200,15 @@ const Informes = () => {
             {i === 9 && (
               <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary">Completo</span>
             )}
+            {i === 12 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">Nuevo</span>
+            )}
           </button>
         ))}
       </div>
 
       {/* ── Filtros estándar (tabs 0-8) ── */}
-      {!isAuditoria && (
+      {!isCustomFilters && (
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
           <select className="border border-input rounded-md px-3 py-2 text-sm bg-background">
@@ -207,8 +268,8 @@ const Informes = () => {
         </div>
       )}
 
-      {/* ── Filtros Auditoría Máximo Detalle ── */}
-      {isAuditoria && (
+      {/* ── Filtros Custom (9-12) ── */}
+      {isCustomFilters && activeTab === 9 && (
         <div className="bg-card border border-border rounded-lg p-5 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <DatabaseZap className="h-4 w-4 text-primary" />
@@ -257,6 +318,178 @@ const Informes = () => {
             <button className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:opacity-90 col-span-2 lg:col-span-1">
               <Download className="h-4 w-4" /> Descargar Excel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filtros Plano y Estado ERP (10 y 11) ── */}
+      {isCustomFilters && (activeTab === 10 || activeTab === 11) && (
+        <div className="bg-card border border-border rounded-lg p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <DatabaseZap className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">Filtros — {tabs[activeTab]}</p>
+            </div>
+            <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:opacity-90">
+              <Download className="h-4 w-4" /> Descargar Excel
+            </button>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background">
+              <option>Todas las sedes</option>
+              {sedes.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background">
+              <option>Todas las operaciones</option>
+              <option>DA</option>
+              <option>DC</option>
+            </select>
+            <input type="text" placeholder="Desde" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background" />
+            <input type="text" placeholder="Hasta" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background" />
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background">
+              <option>Todos los tipos</option>
+              <option>FACTURA DE VENTA</option>
+              <option>NOTA CREDITO</option>
+              <option>NOTA DEBITO</option>
+              <option>ANTICIPO</option>
+            </select>
+            {activeTab === 10 && (
+              <select className="border border-input rounded-md px-3 py-2 text-sm bg-background">
+                <option>CR/CO (Todos)</option>
+                <option>CONTADO</option>
+                <option>CREDITO</option>
+              </select>
+            )}
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background">
+              <option>Estado analista (Todos)</option>
+              <option>PENDIENTE</option>
+              <option>EN_CUADRE</option>
+              <option>ENVIADO_REVISION</option>
+              <option>APROBADO</option>
+            </select>
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background">
+              <option>Estado DIAN (Todos)</option>
+              <option>SIN_VALIDAR</option>
+              <option>PENDIENTE</option>
+              <option>APROBADO_CON_NOTIFICACION</option>
+              <option>RECHAZADO</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filtros Conciliación ERP vs DIAN (12) ── */}
+      {isCustomFilters && activeTab === 12 && (
+        <div className="bg-card border border-border rounded-lg p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <DatabaseZap className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">Filtros — {tabs[activeTab]}</p>
+            </div>
+            <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:opacity-90">
+              <Download className="h-4 w-4" /> Descargar Excel (2 pestañas)
+            </button>
+          </div>
+          <div className="flex gap-4">
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-1/4">
+              <option>Todas las sedes</option>
+              {sedes.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-1/4">
+              <option>Todas las operaciones</option>
+              <option>DA</option>
+              <option>DC</option>
+            </select>
+            <input type="text" placeholder="Desde" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-1/4" />
+            <input type="text" placeholder="Hasta" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-1/4" />
+          </div>
+        </div>
+      )}
+
+      {/* ── Filtros Documentos listos para Odoo (13) ── */}
+      {isCustomFilters && activeTab === 13 && (
+        <div className="bg-card border border-border rounded-lg p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <DatabaseZap className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">Filtros — {tabs[activeTab]}</p>
+            </div>
+            <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:opacity-90">
+              <Download className="h-4 w-4" /> Descargar Excel
+            </button>
+          </div>
+          <div className="flex gap-4 flex-wrap">
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-48">
+              <option>Todas las sedes</option>
+              {sedes.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-48">
+              <option>Todas las operaciones</option>
+              <option>DA</option>
+              <option>DC</option>
+            </select>
+            <input type="text" placeholder="Desde" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-32" />
+            <input type="text" placeholder="Hasta" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-32" />
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-48">
+              <option>Estado envío Odoo (Todos)</option>
+              <option>PENDIENTE_ENVIO</option>
+              <option>ENVIADO</option>
+              <option>CONFIRMADO</option>
+              <option>ERROR</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filtros Asientos Contables (14) ── */}
+      {isCustomFilters && activeTab === 14 && (
+        <div className="bg-card border border-border rounded-lg p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <DatabaseZap className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">Filtros — {tabs[activeTab]}</p>
+            </div>
+            <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:opacity-90">
+              <Download className="h-4 w-4" /> Descargar Excel
+            </button>
+          </div>
+          <div className="flex gap-4 flex-wrap">
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-48">
+              <option>Todas las sedes</option>
+              {sedes.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <input type="text" placeholder="Desde" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-32" />
+            <input type="text" placeholder="Hasta" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-32" />
+            <div className="relative w-64">
+              <button
+                onClick={() => setShowTiposDropdown(!showTiposDropdown)}
+                className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-left flex items-center justify-between"
+              >
+                <span className="text-muted-foreground truncate mr-2">
+                  {tiposSeleccionados.length === 0
+                    ? 'Tipo de movimiento (todos)'
+                    : `${tiposSeleccionados.length} tipo(s) seleccionados`}
+                </span>
+                <span className="text-xs shrink-0">▾</span>
+              </button>
+              {showTiposDropdown && (
+                <div className="absolute z-20 mt-1 w-72 bg-card border border-border rounded-lg shadow-lg p-3 grid grid-cols-1 gap-1 max-h-56 overflow-y-auto">
+                  {['APROVECHAMIENTO', 'RETENCION_CLIENTE', 'GASTO', 'CONSIGNACION_RG', 'CONSIGNACION_ALIADO', 'ANTICIPO_NOMINA', 'TRASLADO_EFECTIVO', 'ANTICIPO_CLIENTE', 'DESCUENTO_ANTICIPO_CLIENTE'].map(t => (
+                    <label key={t} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-accent rounded px-2 py-1">
+                      <input type="checkbox" checked={tiposSeleccionados.includes(t)} onChange={() => toggleTipo(t)} className="accent-primary" />
+                      <span className="font-mono">{t}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-48">
+              <option>Estado Odoo (Todos)</option>
+              <option>PENDIENTE</option>
+              <option>ENVIADO</option>
+              <option>CONFIRMADO</option>
+              <option>ERROR</option>
+            </select>
           </div>
         </div>
       )}
@@ -496,6 +729,201 @@ const Informes = () => {
                 </button>.
               </p>
             </div>
+          </div>
+        {/* ── Tab 10: Plano Documentos ERP ── */}
+        {activeTab === 10 && (
+          <div className="p-16 flex flex-col items-center justify-center text-center">
+            <DatabaseZap className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
+            <h3 className="text-xl font-bold text-foreground mb-2">Detalle completo de facturas, notas y anticipos del ERP</h3>
+            <p className="text-muted-foreground max-w-md mb-8">
+              Este informe contiene demasiadas columnas y registros para mostrarse en pantalla. Por favor, descargue el archivo para su análisis.
+            </p>
+            <button className="flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-md text-base font-semibold hover:opacity-90 shadow-sm">
+              <Download className="h-5 w-5" /> Descargar Excel
+            </button>
+            <p className="text-xs text-muted-foreground mt-4 italic">
+              Este informe se descarga directamente como Excel por el volumen de información.
+            </p>
+          </div>
+        )}
+
+        {/* ── Tab 11: Estado Documentos ERP ── */}
+        {activeTab === 11 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/70">
+                  {['Operación', 'Planilla', 'Documento electrónico', 'Tipo', 'Fecha', 'CR/CO', 'Cliente', 'Valor base', 'IVA', 'Total', 'Estado analista', 'Estado DIAN', 'Validado DIAN'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {estadoDocMock.map((r, i) => (
+                  <tr key={i} className="border-t border-border table-row-alt">
+                    <td className="px-4 py-2.5 font-medium">{r.operacion}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">{r.planilla}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-primary">{r.documento}</td>
+                    <td className="px-4 py-2.5 text-xs">{r.tipo}</td>
+                    <td className="px-4 py-2.5 text-xs whitespace-nowrap">{r.fecha}</td>
+                    <td className="px-4 py-2.5 text-xs">{r.crco}</td>
+                    <td className="px-4 py-2.5 text-xs">{r.cliente}</td>
+                    <td className={`px-4 py-2.5 font-mono text-xs text-right whitespace-nowrap ${r.base < 0 ? 'text-destructive' : ''}`}>{r.base < 0 ? `−${formatCurrency(Math.abs(r.base))}` : formatCurrency(r.base)}</td>
+                    <td className={`px-4 py-2.5 font-mono text-xs text-right whitespace-nowrap ${r.iva < 0 ? 'text-destructive' : ''}`}>{r.iva < 0 ? `−${formatCurrency(Math.abs(r.iva))}` : formatCurrency(r.iva)}</td>
+                    <td className={`px-4 py-2.5 font-mono text-xs font-bold text-right whitespace-nowrap ${r.total < 0 ? 'text-destructive' : ''}`}>{r.total < 0 ? `−${formatCurrency(Math.abs(r.total))}` : formatCurrency(r.total)}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-center">{badgeEstadoAnalista(r.estadoAnalista)}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-center">{badgeEstadoDIAN(r.estadoDian)}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap text-center">{r.validadoDian}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Tab 12: Conciliación ERP vs DIAN ── */}
+        {activeTab === 12 && (
+          <div>
+            <div className="flex border-b border-border bg-muted/20">
+              <button onClick={() => setConcilTab(0)} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors ${concilTab === 0 ? 'border-warning text-warning-foreground bg-warning/10' : 'border-transparent text-muted-foreground hover:bg-muted/50'}`}>
+                En ERP pero NO en DIAN
+              </button>
+              <button onClick={() => setConcilTab(1)} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors ${concilTab === 1 ? 'border-destructive text-destructive bg-destructive/10' : 'border-transparent text-muted-foreground hover:bg-muted/50'}`}>
+                En DIAN pero NO en ERP
+              </button>
+            </div>
+            
+            <div className="p-4 bg-muted/30 border-b border-border">
+              <p className="text-sm text-muted-foreground">
+                {concilTab === 0 ? 'Documentos registrados en nuestros ERPs que no aparecen en el informe de la DIAN.' : 'Documentos validados por la DIAN que no encontramos en nuestros ERPs. Requieren investigación.'}
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              {concilTab === 0 ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/70">
+                      {['Operación', 'Planilla', 'Documento electrónico', 'Tipo', 'Fecha', 'Cliente', 'Valor total', 'Estado analista'].map(h => (
+                        <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {concilNotDianMock.map((r, i) => (
+                      <tr key={i} className="border-t border-border table-row-alt">
+                        <td className="px-4 py-2.5 font-medium">{r.operacion}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs">{r.planilla}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-primary">{r.documento}</td>
+                        <td className="px-4 py-2.5 text-xs">{r.tipo}</td>
+                        <td className="px-4 py-2.5 text-xs">{r.fecha}</td>
+                        <td className="px-4 py-2.5 text-xs">{r.cliente}</td>
+                        <td className={`px-4 py-2.5 font-mono text-xs font-bold text-right whitespace-nowrap ${r.total < 0 ? 'text-destructive' : ''}`}>{r.total < 0 ? `−${formatCurrency(Math.abs(r.total))}` : formatCurrency(r.total)}</td>
+                        <td className="px-4 py-2.5 text-center">{badgeEstadoAnalista(r.estadoAnalista)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/70">
+                      {['Documento electrónico', 'Prefijo', 'Folio', 'Tipo', 'Fecha', 'Base', 'IVA', 'Total', 'Estado DIAN'].map(h => (
+                        <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {concilNotERPMock.map((r, i) => (
+                      <tr key={i} className="border-t border-border table-row-alt">
+                        <td className="px-4 py-2.5 font-mono text-xs text-primary">{r.documento}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs">{r.prefijo}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs">{r.folio}</td>
+                        <td className="px-4 py-2.5 text-xs">{r.tipo}</td>
+                        <td className="px-4 py-2.5 text-xs">{r.fecha}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-right">{formatCurrency(r.base)}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-right">{formatCurrency(r.iva)}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs font-bold text-right">{formatCurrency(r.total)}</td>
+                        <td className="px-4 py-2.5 text-center">{badgeEstadoDIAN(r.estadoDian)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 13: Documentos listos para Odoo ── */}
+        {activeTab === 13 && (
+          <div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/70">
+                    {['Operación', 'Planilla', 'Documento', 'Tipo', 'Fecha', 'Cliente', 'Valor total', 'Estado DIAN', 'Estado envío Odoo', 'Enviado el'].map(h => (
+                      <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {docsOdooMock.map((r, i) => (
+                    <tr key={i} className="border-t border-border table-row-alt">
+                      <td className="px-4 py-2.5 font-medium">{r.operacion}</td>
+                      <td className="px-4 py-2.5 font-mono text-xs">{r.planilla}</td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-primary">{r.documento}</td>
+                      <td className="px-4 py-2.5 text-xs">{r.tipo}</td>
+                      <td className="px-4 py-2.5 text-xs whitespace-nowrap">{r.fecha}</td>
+                      <td className="px-4 py-2.5 text-xs">{r.cliente}</td>
+                      <td className={`px-4 py-2.5 font-mono text-xs font-bold text-right whitespace-nowrap ${r.total < 0 ? 'text-destructive' : ''}`}>{r.total < 0 ? `−${formatCurrency(Math.abs(r.total))}` : formatCurrency(r.total)}</td>
+                      <td className="px-4 py-2.5 text-center">{badgeEstadoDIAN(r.estadoDian)}</td>
+                      <td className="px-4 py-2.5 text-center">{badgeEstadoEnvioOdoo(r.estadoEnvio)}</td>
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap text-center">{r.enviado}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Nota al pie */}
+            <div className="border-t border-border px-5 py-3 bg-blue-50/50 dark:bg-blue-900/10">
+              <p className="text-xs text-blue-800 dark:text-blue-300">
+                ℹ️ Solo se muestran documentos con estado analista = <span className="font-semibold">APROBADO</span> y estado DIAN = <span className="font-semibold">APROBADO CON NOTIFICACIÓN</span>.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 14: Asientos Contables ── */}
+        {activeTab === 14 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[1400px]">
+              <thead>
+                <tr className="bg-muted/70">
+                  {['Fecha', 'Referencia', 'Tipo movimiento', 'Déb. Cuenta', 'Déb. Analítica', 'Cré. Cuenta', 'Cré. Analítica', 'Diario', 'NIT Tercero', 'Nombre Tercero', 'Valor', 'Estado Odoo', 'Error'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {asientosContablesMock.map((r, i) => (
+                  <tr key={i} className="border-t border-border table-row-alt">
+                    <td className="px-4 py-2.5 text-xs whitespace-nowrap">{r.fecha}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-primary whitespace-nowrap">{r.referencia}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">{badgeTipoMov(r.tipo)}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">{r.debitoCta}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{r.debitoAnalitica}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">{r.creditoCta}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{r.creditoAnalitica}</td>
+                    <td className="px-4 py-2.5 text-xs">{r.diario}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">{r.nit}</td>
+                    <td className="px-4 py-2.5 text-xs whitespace-nowrap">{r.nombre}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs font-bold text-right whitespace-nowrap">{formatCurrency(r.valor)}</td>
+                    <td className="px-4 py-2.5 text-center">{badgeEstadoOdoo(r.estadoOdoo, r.error)}</td>
+                    <td className="px-4 py-2.5 text-xs text-destructive max-w-[150px] truncate" title={r.error !== '—' ? r.error : ''}>{r.error}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
