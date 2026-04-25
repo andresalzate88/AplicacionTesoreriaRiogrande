@@ -86,7 +86,9 @@ interface GastoRuta22 {
   nFactura: string;
   cuentaAnaliticaId: string;
   cuentaAnaliticaNombre: string;
-  tarifaIva: number;
+  tipoImpuestoId: string;
+  tipoImpuestoNombre: string;
+  fecha?: string;
   retencionId: string;
   retencionNombre: string;
   retencionPct: number;
@@ -124,11 +126,11 @@ const cuentasAnaliticas22 = [
   { id: 'ca3', nombre: 'DMA-Cárnicos 100%'         },
 ];
 
-const ivasDisponibles = [
-  { pct: 19, label: 'iva base 19%' },
-  { pct: 5,  label: 'iva base 5%' },
-  { pct: 8,  label: 'ipoconsumo 8%' },
-  { pct: 0, label: 'sin impuesto  '}
+const tiposImpuesto22 = [
+  { id: 'imp0', nombre: 'Sin impuesto', pct: 0 },
+  { id: 'imp1', nombre: 'IVA base 5 compras', pct: 5 },
+  { id: 'imp2', nombre: 'IVA base 19 compras', pct: 19 },
+  { id: 'imp3', nombre: 'Impuesto al consumo', pct: 8 },
 ];
 
 const retencionesProveedor = [
@@ -143,7 +145,7 @@ const gastosMock22: GastoRuta22[] = [
     requiereDocElec: true, topeMaximo: 50000,
     proveedorNit: '900123456', proveedorNombre: 'Concesión Vial 4G',
     nFactura: 'FE-001', cuentaAnaliticaId: 'ca1', cuentaAnaliticaNombre: 'DMA-Alpina 100%',
-    tarifaIva: 19, retencionId: '', retencionNombre: '', retencionPct: 0,
+    tipoImpuestoId: 'imp2', tipoImpuestoNombre: 'IVA base 19 compras', retencionId: '', retencionNombre: '', retencionPct: 0,
     valorBase: 25000, superaTope: false, justificacion: '',
   },
   {
@@ -151,7 +153,7 @@ const gastosMock22: GastoRuta22[] = [
     requiereDocElec: true, topeMaximo: 100000,
     proveedorNit: '900456789', proveedorNombre: 'EDS El Nogal',
     nFactura: 'FE-002', cuentaAnaliticaId: 'ca2', cuentaAnaliticaNombre: 'DMA-Alpina+Cárnicos 50/50',
-    tarifaIva: 8, retencionId: 'r1', retencionNombre: 'Retefte 2.5%', retencionPct: 2.5,
+    tipoImpuestoId: 'imp3', tipoImpuestoNombre: 'Impuesto al consumo', retencionId: 'r1', retencionNombre: 'Retefte 2.5%', retencionPct: 2.5,
     valorBase: 80000, superaTope: false, justificacion: '',
   },
 ];
@@ -477,8 +479,8 @@ const CuadrePlanillas = () => {
                 requiereDocElec: primerTipo.requiere_documento_electronico, topeMaximo: primerTipo.tope_maximo,
                 proveedorNit: '', proveedorNombre: '', nFactura: '',
                 cuentaAnaliticaId: cuentasAnaliticas22[0].id, cuentaAnaliticaNombre: cuentasAnaliticas22[0].nombre,
-                tarifaIva: 0, retencionId: '', retencionNombre: '', retencionPct: 0,
-                valorBase: 0, superaTope: false, justificacion: '',
+                tipoImpuestoId: 'imp0', tipoImpuestoNombre: 'Sin impuesto', retencionId: '', retencionNombre: '', retencionPct: 0,
+                valorBase: 0, superaTope: false, justificacion: '', fecha: new Date().toISOString().split('T')[0],
               }]);
             }}
             className="flex items-center gap-2 text-sm text-primary hover:bg-accent px-3 py-1.5 rounded-md transition-colors"
@@ -491,6 +493,7 @@ const CuadrePlanillas = () => {
           <table className="w-full text-xs" style={{ minWidth: '1100px' }}>
             <thead>
               <tr className="bg-muted/70">
+                <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Fecha del gasto</th>
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Tipo de gasto</th>
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Proveedor</th>
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">N° Factura</th>
@@ -506,7 +509,8 @@ const CuadrePlanillas = () => {
             </thead>
             <tbody>
               {gastos22.map((g) => {
-                const ivaCalc  = Math.round(g.valorBase * g.tarifaIva / 100);
+                const pct = tiposImpuesto22.find(t => t.id === g.tipoImpuestoId)?.pct || 0;
+                const ivaCalc  = Math.round(g.valorBase * pct / 100);
                 const retCalc  = Math.round(g.valorBase * g.retencionPct / 100);
                 const total    = g.valorBase + ivaCalc - retCalc;
                 const superaTope = total > g.topeMaximo;
@@ -523,6 +527,20 @@ const CuadrePlanillas = () => {
                 return (
                   <>
                     <tr key={g.id} className={`border-t border-border transition-colors ${superaTope ? 'bg-red-50 dark:bg-red-900/15' : 'hover:bg-muted/30'}`}>
+                      {/* 0. FECHA */}
+                      <td className="px-2 py-2">
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground hidden">Fecha del gasto</label>
+                          <input
+                            type="date"
+                            defaultValue={g.fecha || new Date().toISOString().split('T')[0]}
+                            onChange={e => updateG({ fecha: e.target.value })}
+                            className="w-full border border-border rounded px-2 py-1.5 text-sm bg-background mt-1"
+                            title="Máximo 2 días hacia atrás y 0 días hacia adelante respecto a la fecha del cuadre"
+                          />
+                          <p className="text-[10px] text-muted-foreground mt-1 leading-tight">Máx. 2 días hacia atrás<br/>0 días hacia adelante</p>
+                        </div>
+                      </td>
 
                       {/* 1. TIPO DE GASTO */}
                       <td className="px-2 py-2">
@@ -616,11 +634,16 @@ const CuadrePlanillas = () => {
                       {/* 5. TIPO IMPUESTO */}
                       <td className="px-2 py-2">
                         <select
-                          value={g.tarifaIva}
-                          onChange={e => updateG({ tarifaIva: Number(e.target.value) })}
-                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-32 focus:outline-none focus:ring-1 focus:ring-primary"
+                          value={g.tipoImpuestoId}
+                          onChange={e => {
+                            const t = tiposImpuesto22.find(x => x.id === e.target.value);
+                            updateG({ tipoImpuestoId: t?.id || '', tipoImpuestoNombre: t?.nombre || '' });
+                          }}
+                          className="border border-border rounded px-2 py-1.5 text-sm bg-background"
                         >
-                          {ivasDisponibles.map(i => <option key={i.pct} value={i.pct}>{i.label}</option>)}
+                          {tiposImpuesto22.map(t => (
+                            <option key={t.id} value={t.id}>{t.nombre}</option>
+                          ))}
                         </select>
                       </td>
 
@@ -797,13 +820,25 @@ const CuadrePlanillas = () => {
         <h3 className="text-lg font-semibold text-foreground mb-4">2.3 — Consignaciones a Riogrande</h3>
 
         {/* Disponibles */}
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Consignaciones disponibles</p>
+        <div className="flex justify-between items-end mb-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Consignaciones disponibles</p>
+          <div className="w-72">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Cuenta destino</label>
+            <select className="w-full border border-input rounded px-2 py-1.5 bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+              <option value="">Todas</option>
+              <option value="Bancolombia Ahorros 454">Bancolombia Ahorros 454</option>
+              <option value="Bancolombia Corriente 4552">Bancolombia Corriente 4552</option>
+              <option value="CFA">CFA</option>
+            </select>
+            <p className="text-[10px] text-muted-foreground mt-1 leading-tight">Las opciones corresponden a cuentas parametrizadas en Parámetros Contables › consignaciones a riogrande</p>
+          </div>
+        </div>
         <div className="bg-card rounded-lg border border-border overflow-hidden mb-5">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/70">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Banco</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cuenta destino</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Referencia</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Valor</th>
                 <th className="text-center px-4 py-3 font-medium text-muted-foreground">Estado</th>
@@ -848,7 +883,7 @@ const CuadrePlanillas = () => {
             <thead>
               <tr className="bg-muted/70">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Banco</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cuenta destino</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Referencia</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Valor</th>
                 <th className="px-4 py-3"></th>
