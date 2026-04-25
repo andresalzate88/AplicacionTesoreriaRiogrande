@@ -55,6 +55,7 @@ const AppSidebar = () => {
       <div className="px-5 py-4 border-t border-sidebar-border">
         <p className="text-xs text-sidebar-muted mb-1">Sede activa</p>
         <p className="text-sm font-medium text-sidebar-primary mb-3">Donmatías</p>
+        <p className="text-xs text-sidebar-muted mt-1 mb-3">Rol: Auxiliar de Tesorería</p>
         <button
           onClick={logout}
           className="flex items-center gap-2 text-sm text-sidebar-muted hover:text-sidebar-primary transition-colors"
