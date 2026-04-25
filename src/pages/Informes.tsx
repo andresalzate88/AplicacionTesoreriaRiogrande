@@ -879,7 +879,7 @@ const Informes = () => {
                       <td className="px-4 py-2.5 text-xs">{r.cliente}</td>
                       <td className={`px-4 py-2.5 font-mono text-xs font-bold text-right whitespace-nowrap ${r.total < 0 ? 'text-destructive' : ''}`}>{r.total < 0 ? `−${formatCurrency(Math.abs(r.total))}` : formatCurrency(r.total)}</td>
                       <td className="px-4 py-2.5 text-center">{badgeEstadoDIAN(r.estadoDian)}</td>
-                      <td className="px-4 py-2.5 text-center">{badgeEstadoEnvioOdoo(r.estadoEnvio)}</td>
+                      <td className="px-4 py-2.5 text-center">{badgeEstadoOdoo(r.estadoEnvio)}</td>
                       <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap text-center">{r.enviado}</td>
                     </tr>
                   ))}

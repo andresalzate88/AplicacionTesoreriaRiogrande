@@ -250,7 +250,7 @@ const RecaudoDiario = () => {
                 <button
                   disabled={!addTipo || !addDestinoNombre || addValor <= 0}
                   onClick={() => {
-                    setDestinos([...destinos, { id: String(Date.now()), tipo: addTipo, destinoNombre: addDestinoNombre, detalle: addDetalle || '—', valor: addValor }]);
+                    setDestinos([...destinos, { id: String(Date.now()), tipo: addTipo as TipoDestino32, destinoNombre: addDestinoNombre, detalle: addDetalle || '—', valor: addValor }]);
                     setShowAddModal(false);
                   }}
                   className="bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
