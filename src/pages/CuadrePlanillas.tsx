@@ -497,7 +497,7 @@ const CuadrePlanillas = () => {
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Cuenta analítica</th>
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Tipo impuesto</th>
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Retención</th>
-                <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Valor base</th>
+                <th className="text-center px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Valor base</th>
                 <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Valor impuesto</th>
                 <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Retención $</th>
                 <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Total</th>
@@ -641,17 +641,19 @@ const CuadrePlanillas = () => {
                       </td>
 
                       {/* 7. VALOR BASE */}
-                      <td className="px-2 py-2 text-right">
-                        <input
-                          type="text"
-                          value={g.valorBase === 0 ? '' : g.valorBase.toLocaleString('es-CO')}
-                          onChange={e => {
-                            const v = parseInt(e.target.value.replace(/\D/g, '')) || 0;
-                            updateG({ valorBase: v });
-                          }}
-                          placeholder="0"
-                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-28 text-right font-mono focus:outline-none focus:ring-1 focus:ring-primary inline-block"
-                        />
+                      <td className="px-2 py-2">
+                        <div className="flex justify-center">
+                          <input
+                            type="text"
+                            value={g.valorBase === 0 ? '' : g.valorBase.toLocaleString('es-CO')}
+                            onChange={e => {
+                              const v = parseInt(e.target.value.replace(/\D/g, '')) || 0;
+                              updateG({ valorBase: v });
+                            }}
+                            placeholder="0"
+                            className="border border-input rounded px-1.5 py-1 bg-background text-xs w-28 text-center font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
                       </td>
 
                       {/* 8. VALOR IMPUESTO — calculado, visible si tarifaIva > 0 */}
