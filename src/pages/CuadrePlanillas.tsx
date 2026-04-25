@@ -125,9 +125,10 @@ const cuentasAnaliticas22 = [
 ];
 
 const ivasDisponibles = [
-  { pct: 0,  label: '0%'  },
-  { pct: 5,  label: '5%'  },
-  { pct: 19, label: '19%' },
+  { pct: 19, label: 'iva base 19%' },
+  { pct: 5,  label: 'iva base 5%' },
+  { pct: 8,  label: 'ipoconsumo 8%' },
+  { pct: 0, label: 'sin impuesto  '}
 ];
 
 const retencionesProveedor = [
@@ -150,7 +151,7 @@ const gastosMock22: GastoRuta22[] = [
     requiereDocElec: true, topeMaximo: 100000,
     proveedorNit: '900456789', proveedorNombre: 'EDS El Nogal',
     nFactura: 'FE-002', cuentaAnaliticaId: 'ca2', cuentaAnaliticaNombre: 'DMA-Alpina+Cárnicos 50/50',
-    tarifaIva: 5, retencionId: 'r1', retencionNombre: 'Retefte 2.5%', retencionPct: 2.5,
+    tarifaIva: 8, retencionId: 'r1', retencionNombre: 'Retefte 2.5%', retencionPct: 2.5,
     valorBase: 80000, superaTope: false, justificacion: '',
   },
 ];
@@ -494,10 +495,10 @@ const CuadrePlanillas = () => {
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Proveedor</th>
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">N° Factura</th>
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Cuenta analítica</th>
-                <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Tarifa IVA</th>
+                <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Tipo impuesto</th>
                 <th className="text-left px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Retención</th>
                 <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Valor base</th>
-                <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">IVA</th>
+                <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Valor impuesto</th>
                 <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Retención $</th>
                 <th className="text-right px-2 py-3 font-medium text-muted-foreground whitespace-nowrap">Total</th>
                 <th className="px-2 py-3 w-8"></th>
@@ -612,12 +613,12 @@ const CuadrePlanillas = () => {
                         </select>
                       </td>
 
-                      {/* 5. TARIFA IVA */}
+                      {/* 5. TIPO IMPUESTO */}
                       <td className="px-2 py-2">
                         <select
                           value={g.tarifaIva}
                           onChange={e => updateG({ tarifaIva: Number(e.target.value) })}
-                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-20 focus:outline-none focus:ring-1 focus:ring-primary"
+                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-32 focus:outline-none focus:ring-1 focus:ring-primary"
                         >
                           {ivasDisponibles.map(i => <option key={i.pct} value={i.pct}>{i.label}</option>)}
                         </select>
@@ -640,7 +641,7 @@ const CuadrePlanillas = () => {
                       </td>
 
                       {/* 7. VALOR BASE */}
-                      <td className="px-2 py-2">
+                      <td className="px-2 py-2 text-right">
                         <input
                           type="text"
                           value={g.valorBase === 0 ? '' : g.valorBase.toLocaleString('es-CO')}
@@ -649,11 +650,11 @@ const CuadrePlanillas = () => {
                             updateG({ valorBase: v });
                           }}
                           placeholder="0"
-                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-28 text-right font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                          className="border border-input rounded px-1.5 py-1 bg-background text-xs w-28 text-right font-mono focus:outline-none focus:ring-1 focus:ring-primary inline-block"
                         />
                       </td>
 
-                      {/* 8. IVA — calculado, visible si tarifaIva > 0 */}
+                      {/* 8. VALOR IMPUESTO — calculado, visible si tarifaIva > 0 */}
                       <td className="px-2 py-2 text-right font-mono">
                         {g.tarifaIva > 0 ? (
                           <span className="text-blue-600 dark:text-blue-400">{formatCurrency(ivaCalc)}</span>
