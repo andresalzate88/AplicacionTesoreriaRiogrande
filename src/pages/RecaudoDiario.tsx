@@ -36,7 +36,7 @@ const parametrosDestinos: Record<TipoDestino32, string[]> = {
   'Anticipo a Aliado': ['Anticipo Alpina DMA', 'Anticipo Cárnicos DMA'],
   'Gasto': ['Peajes', 'Combustible', 'Robos'],
   'Anticipo Nómina': ['Anticipo Juan', 'Anticipo Carlos'],
-  'Traslado de Caja': ['Caja Menor DMA', 'TVS QBO', 'Istmina'],
+  'Traslado de Caja': ['Caja menor DMA', 'TVS QBO', 'Istmina QBO', 'Prosegur CAC'],
 };
 
 const RecaudoDiario = () => {
@@ -54,7 +54,7 @@ const RecaudoDiario = () => {
   const soportes = [...soportesBase];
   if (destinos.length > 0) {
     soportes.push({
-      nombre: 'DESTINOS DE EFECTIVO',
+      nombre: 'TRASLADOS DE CAJA',
       estado: 'Pendiente',
       descripcion: 'Soportes de consignaciones, gastos y traslados registrados en la sección de destinos de efectivo.',
       icono: Upload
@@ -162,6 +162,9 @@ const RecaudoDiario = () => {
                       <option value="">Seleccione...</option>
                       {parametrosDestinos[addTipo].map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
+                    {addTipo === 'Traslado de Caja' && (
+                      <p className="text-xs text-muted-foreground mt-1">Solo se muestran traslados parametrizados para tu sede (DMA)</p>
+                    )}
                   </div>
                 )}
               </div>
