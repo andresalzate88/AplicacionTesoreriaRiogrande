@@ -20,7 +20,7 @@ const tabs = [
   'Estado Documentos ERP',
   'Conciliación ERP vs DIAN',
   'Documentos listos para Odoo',
-  'Asientos Contables',
+  'Transacciones Odoo',
 ];
 
 // ─── Mock data nuevos informes ────────────────────────────────────────────────
@@ -89,11 +89,12 @@ const docsOdooMock = [
   { operacion: 'DC', planilla: 'DC-11201', documento: 'DMA779131', tipo: 'FAC. VENTA', fecha: '19/04/2026', cliente: 'Tienda Mixta', total: 420000, estadoDian: 'APROBADO_CON_NOTIFICACION', estadoEnvio: 'PENDIENTE_ENVIO', enviado: '—' },
 ];
 
-const asientosContablesMock = [
-  { fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'RETENCION_CLIENTE', debitoCta: '13551525', debitoAnalitica: '{"7":100}', creditoCta: '130501', creditoAnalitica: '—', diario: 'VDA', nit: '1039760460', nombre: 'Tienda El Sol', valor: 7578, estadoOdoo: 'PENDIENTE', error: '—' },
-  { fecha: '19/04/2026', referencia: 'FE-001', tipo: 'GASTO', debitoCta: '520101', debitoAnalitica: '{"7":100}', creditoCta: '130501', creditoAnalitica: '—', diario: 'VDA', nit: '900123456', nombre: 'Concesión Vial', valor: 29750, estadoOdoo: 'CONFIRMADO', error: '—' },
-  { fecha: '19/04/2026', referencia: 'DMA-RD-190426', tipo: 'CONSIGNACION_RG', debitoCta: '133131313', debitoAnalitica: '—', creditoCta: '130501', creditoAnalitica: '—', diario: 'VDA', nit: '811012258', nombre: 'DISTRIBUCIONES RIOGRANDE', valor: 3000000, estadoOdoo: 'ERROR', error: 'Diario no configurado' },
-  { fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'ANTICIPO_NOMINA', debitoCta: '2822222', debitoAnalitica: '{"7":100}', creditoCta: '130501', creditoAnalitica: '—', diario: 'VDA', nit: '98480254', nombre: 'Juan García', valor: 70000, estadoOdoo: 'PENDIENTE', error: '—' },
+const mockTransaccionesInforme = [
+  { fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'RETENCION_CLIENTE', nit: '1039760460', nombre: 'Tienda El Sol',      valor: 7578,    estadoOdoo: 'PENDIENTE',  errorSync: '' },
+  { fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'GASTO_CAUSACION',   nit: '900123456',  nombre: 'Concesión Vial 4G', valor: 25000,   estadoOdoo: 'CONFIRMADO', errorSync: '' },
+  { fecha: '19/04/2026', referencia: 'DMA-RD-190426', tipo: 'CONSIGNACION_RG',   nit: '',           nombre: '',                  valor: 3000000, estadoOdoo: 'ERROR',      errorSync: 'Diario no configurado' },
+  { fecha: '19/04/2026', referencia: 'DMA-110426.02', tipo: 'ANTICIPO_NOMINA',   nit: '1037567890', nombre: 'Carlos Pérez',      valor: 50000,   estadoOdoo: 'PENDIENTE',  errorSync: '' },
+  { fecha: '19/04/2026', referencia: 'DMA-RD-190426', tipo: 'TRASLADO_CAJA',     nit: '',           nombre: 'Caja menor DMA',    valor: 500000,  estadoOdoo: 'ENVIADO',    errorSync: '' },
 ];
 
 // ─── Helpers de badges ────────────────────────────────────────────────────────
@@ -441,50 +442,37 @@ const Informes = () => {
         </div>
       )}
 
-      {/* ── Filtros Asientos Contables (14) ── */}
+      {/* ── Filtros Transacciones Odoo (14) ── */}
       {isCustomFilters && activeTab === 14 && (
         <div className="bg-card border border-border rounded-lg p-5 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <DatabaseZap className="h-4 w-4 text-primary" />
-              <p className="text-sm font-semibold text-foreground">Filtros — {tabs[activeTab]}</p>
+              <p className="text-sm font-semibold text-foreground">Filtros — Transacciones Odoo</p>
             </div>
             <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:opacity-90">
               <Download className="h-4 w-4" /> Descargar Excel
             </button>
           </div>
           <div className="flex gap-4 flex-wrap">
-            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-48">
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-40">
               <option>Todas las sedes</option>
               {sedes.map(s => <option key={s}>{s}</option>)}
             </select>
-            <input type="text" placeholder="Desde" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-32" />
-            <input type="text" placeholder="Hasta" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-32" />
-            <div className="relative w-64">
-              <button
-                onClick={() => setShowTiposDropdown(!showTiposDropdown)}
-                className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-left flex items-center justify-between"
-              >
-                <span className="text-muted-foreground truncate mr-2">
-                  {tiposSeleccionados.length === 0
-                    ? 'Tipo de movimiento (todos)'
-                    : `${tiposSeleccionados.length} tipo(s) seleccionados`}
-                </span>
-                <span className="text-xs shrink-0">▾</span>
-              </button>
-              {showTiposDropdown && (
-                <div className="absolute z-20 mt-1 w-72 bg-card border border-border rounded-lg shadow-lg p-3 grid grid-cols-1 gap-1 max-h-56 overflow-y-auto">
-                  {['APROVECHAMIENTO', 'RETENCION_CLIENTE', 'GASTO', 'CONSIGNACION_RG', 'CONSIGNACION_ALIADO', 'ANTICIPO_NOMINA', 'TRASLADO_EFECTIVO', 'ANTICIPO_CLIENTE', 'DESCUENTO_ANTICIPO_CLIENTE'].map(t => (
-                    <label key={t} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-accent rounded px-2 py-1">
-                      <input type="checkbox" checked={tiposSeleccionados.includes(t)} onChange={() => toggleTipo(t)} className="accent-primary" />
-                      <span className="font-mono">{t}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+            <input type="date" defaultValue="2026-04-11" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-36" />
+            <input type="date" defaultValue="2026-04-19" className="border border-input rounded-md px-3 py-2 text-sm bg-background w-36" />
             <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-48">
-              <option>Estado Odoo (Todos)</option>
+              <option value="">Tipo (Todos)</option>
+              <option>RETENCION_CLIENTE</option>
+              <option>GASTO_CAUSACION</option>
+              <option>GASTO_EGRESO</option>
+              <option>CONSIGNACION_RG</option>
+              <option>CONSIGNACION_ALIADO</option>
+              <option>ANTICIPO_NOMINA</option>
+              <option>TRASLADO_CAJA</option>
+            </select>
+            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background w-44">
+              <option value="">Estado Odoo (Todos)</option>
               <option>PENDIENTE</option>
               <option>ENVIADO</option>
               <option>CONFIRMADO</option>
@@ -895,35 +883,44 @@ const Informes = () => {
           </div>
         )}
 
-        {/* ── Tab 14: Asientos Contables ── */}
+        {/* ── Tab 14: Transacciones Odoo ── */}
         {activeTab === 14 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[1400px]">
+            <table className="w-full text-sm min-w-[900px]">
               <thead>
                 <tr className="bg-muted/70">
-                  {['Fecha', 'Referencia', 'Tipo movimiento', 'Déb. Cuenta', 'Déb. Analítica', 'Cré. Cuenta', 'Cré. Analítica', 'Diario', 'NIT Tercero', 'Nombre Tercero', 'Valor', 'Estado Odoo', 'Error'].map(h => (
+                  {['Fecha', 'Referencia', 'Tipo', 'NIT Tercero', 'Nombre Tercero', 'Valor', 'Estado Odoo', 'Error Sync'].map(h => (
                     <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {asientosContablesMock.map((r, i) => (
-                  <tr key={i} className="border-t border-border table-row-alt">
-                    <td className="px-4 py-2.5 text-xs whitespace-nowrap">{r.fecha}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-primary whitespace-nowrap">{r.referencia}</td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">{badgeTipoMov(r.tipo)}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{r.debitoCta}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{r.debitoAnalitica}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{r.creditoCta}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{r.creditoAnalitica}</td>
-                    <td className="px-4 py-2.5 text-xs">{r.diario}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{r.nit}</td>
-                    <td className="px-4 py-2.5 text-xs whitespace-nowrap">{r.nombre}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs font-bold text-right whitespace-nowrap">{formatCurrency(r.valor)}</td>
-                    <td className="px-4 py-2.5 text-center">{badgeEstadoOdoo(r.estadoOdoo, r.error)}</td>
-                    <td className="px-4 py-2.5 text-xs text-destructive max-w-[150px] truncate" title={r.error !== '—' ? r.error : ''}>{r.error}</td>
-                  </tr>
-                ))}
+                {mockTransaccionesInforme.map((r, i) => {
+                  const badgeOdoo = (est: string) => {
+                    const cls =
+                      est === 'CONFIRMADO' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                      est === 'ENVIADO'    ? 'bg-primary/20 text-primary' :
+                      est === 'ERROR'      ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
+                      'bg-muted text-muted-foreground';
+                    return <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{est}</span>;
+                  };
+                  return (
+                    <tr key={i} className={`border-t border-border table-row-alt ${r.estadoOdoo === 'ERROR' ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
+                      <td className="px-4 py-2.5 text-xs whitespace-nowrap">{r.fecha}</td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-primary whitespace-nowrap">{r.referencia}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className="px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-muted text-muted-foreground">{r.tipo}</span>
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-xs">{r.nit || '—'}</td>
+                      <td className="px-4 py-2.5 text-xs whitespace-nowrap">{r.nombre || '—'}</td>
+                      <td className="px-4 py-2.5 font-mono text-xs font-bold text-right whitespace-nowrap">{formatCurrency(r.valor)}</td>
+                      <td className="px-4 py-2.5 text-center">{badgeOdoo(r.estadoOdoo)}</td>
+                      <td className="px-4 py-2.5 text-xs text-destructive max-w-[180px] truncate" title={r.errorSync}>
+                        {r.errorSync || <span className="text-muted-foreground">—</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
