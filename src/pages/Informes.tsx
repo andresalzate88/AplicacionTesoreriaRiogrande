@@ -730,6 +730,8 @@ const Informes = () => {
               </p>
             </div>
           </div>
+        )}
+
         {/* ── Tab 10: Plano Documentos ERP ── */}
         {activeTab === 10 && (
           <div className="p-16 flex flex-col items-center justify-center text-center">
