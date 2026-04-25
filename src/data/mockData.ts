@@ -26,7 +26,8 @@ export interface GastoRuta {
   nombre: string;
   tipoGasto: string;
   valorBase: number;
-  iva: number;
+  valorImpuesto: number;
+  tipoImpuesto: string;
   total: number;
   superaTope: boolean;
   justificacion: string;
@@ -83,10 +84,10 @@ export const facturasMock: Factura[] = [
 ];
 
 export const gastosMock: GastoRuta[] = [
-  { id: '1', nit: '900123456', nombre: 'Estación Terpel KM 12', tipoGasto: 'Combustible', valorBase: 450000, iva: 85500, total: 535500, superaTope: false, justificacion: '' },
-  { id: '2', nit: '800987654', nombre: 'Peaje Hatillo', tipoGasto: 'Peajes', valorBase: 28000, iva: 0, total: 28000, superaTope: false, justificacion: '' },
-  { id: '3', nit: '901234567', nombre: 'Restaurante La Fonda', tipoGasto: 'Alimentación', valorBase: 312000, iva: 0, total: 312000, superaTope: true, justificacion: '' },
-  { id: '4', nit: '800111222', nombre: 'Llantas Express', tipoGasto: 'Mantenimiento vehículo', valorBase: 50000, iva: 9500, total: 59500, superaTope: false, justificacion: '' },
+  { id: '1', nit: '900123456', nombre: 'Estación Terpel KM 12', tipoGasto: 'Combustible', valorBase: 450000, valorImpuesto: 85500, tipoImpuesto: '', total: 535500, superaTope: false, justificacion: '' },
+  { id: '2', nit: '800987654', nombre: 'Peaje Hatillo', tipoGasto: 'Peajes', valorBase: 28000, valorImpuesto: 0, tipoImpuesto: '', total: 28000, superaTope: false, justificacion: '' },
+  { id: '3', nit: '901234567', nombre: 'Restaurante La Fonda', tipoGasto: 'Alimentación', valorBase: 312000, valorImpuesto: 0, tipoImpuesto: '', total: 312000, superaTope: true, justificacion: '' },
+  { id: '4', nit: '800111222', nombre: 'Llantas Express', tipoGasto: 'Mantenimiento vehículo', valorBase: 50000, valorImpuesto: 9500, tipoImpuesto: '', total: 59500, superaTope: false, justificacion: '' },
 ];
 
 export const consignacionesRiograndeMock: Consignacion[] = [
@@ -105,7 +106,7 @@ export const anticiposMock: AnticipoNomina[] = [
   { id: '2', fecha: '11/04/2026', empleado: 'Andrés Ríos', concepto: 'Pasaje', valor: 40000, soporte: true },
 ];
 
-export const aliados = ['Alpina', 'Cárnicos', 'Nutresa', 'Meals', 'Familia'];
+
 export const bancos = ['Bancolombia', 'Davivienda', 'BBVA', 'Banco de Bogotá', 'Banco Popular'];
 export const empleados = ['Carlos Pérez', 'Andrés Ríos', 'Laura Gómez', 'Jorge Martínez', 'Diana López'];
 export const tiposGasto = ['Combustible', 'Peajes', 'Alimentación', 'Mantenimiento vehículo', 'Parqueadero', 'Papelería'];
@@ -124,4 +125,46 @@ export const checklistItems: ChecklistItem[] = [
   { id: 9, descripcion: 'Soportes destinos de efectivo', estado: '', nota: '' },
   { id: 10, descripcion: 'Arqueo de efectivo', estado: '', nota: '' },
   { id: 11, descripcion: 'Denuncias por hurto', estado: '', nota: '' },
+];
+
+export const aliados = [
+  { id: 'a1', nombre: 'ALPINA',   letra: 'A', nit: '860002623', razonSocial: 'Alpina Productos Alimenticios S.A.' },
+  { id: 'a2', nombre: 'CARNICOS', letra: 'C', nit: '890900608', razonSocial: 'Industria de Alimentos Zenú S.A.S.' },
+  { id: 'a3', nombre: 'FAMILIA',  letra: 'F', nit: '860003978', razonSocial: 'Productos Familia S.A.' },
+  { id: 'a4', nombre: 'NUTRESA',  letra: 'N', nit: '890900000', razonSocial: 'Grupo Nutresa S.A.' },
+  { id: 'a5', nombre: 'MEALS',    letra: 'M', nit: '900100000', razonSocial: 'Meals de Colombia S.A.S.' },
+];
+
+export const parametrosContables = [
+  { id: 'pc1',  tipoAsiento: 'gastos',                    detalleAsiento: 'Peajes',                   cuenta: '5210101', idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc2',  tipoAsiento: 'gastos',                    detalleAsiento: 'Combustible',               cuenta: '5210102', idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc3',  tipoAsiento: 'gastos',                    detalleAsiento: 'Alimentación',              cuenta: '5210103', idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc4',  tipoAsiento: 'gastos',                    detalleAsiento: 'Mantenimiento vehículo',    cuenta: '5210104', idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc5',  tipoAsiento: 'gastos',                    detalleAsiento: 'Hurto',                     cuenta: '5210105', idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc6',  tipoAsiento: 'retenciones clientes',      detalleAsiento: 'Retefuente 2.5%',           cuenta: '2365',    idExternoOdoo: 'RET_FTE_25',   diarioOdoo: '',              sede: null   },
+  { id: 'pc7',  tipoAsiento: 'retenciones clientes',      detalleAsiento: 'Retefuente 10%',            cuenta: '2366',    idExternoOdoo: 'RET_FTE_10',   diarioOdoo: '',              sede: null   },
+  { id: 'pc8',  tipoAsiento: 'retenciones a proveedores', detalleAsiento: 'Retefte 2.5%',              cuenta: '236701',  idExternoOdoo: 'RET_PROV_25',  diarioOdoo: '',              sede: null   },
+  { id: 'pc9',  tipoAsiento: 'impuestos en gastos',       detalleAsiento: 'IVA base 5 compras',        cuenta: '240810',  idExternoOdoo: 'IVA_5',        diarioOdoo: '',              sede: null   },
+  { id: 'pc10', tipoAsiento: 'impuestos en gastos',       detalleAsiento: 'IVA base 19 compras',       cuenta: '240810',  idExternoOdoo: 'IVA_19',       diarioOdoo: '',              sede: null   },
+  { id: 'pc11', tipoAsiento: 'impuestos en gastos',       detalleAsiento: 'Impuesto al consumo',       cuenta: '240820',  idExternoOdoo: 'ICONSUMO',     diarioOdoo: '',              sede: null   },
+  { id: 'pc12', tipoAsiento: 'consignaciones a riogrande',detalleAsiento: 'Bancolombia Ahorros 454',   cuenta: '133131',  idExternoOdoo: '',              diarioOdoo: 'BANCO_BCOL_AH', sede: 'DMA'  },
+  { id: 'pc13', tipoAsiento: 'consignaciones a riogrande',detalleAsiento: 'Bancolombia Corriente 4552',cuenta: '133132',  idExternoOdoo: '',              diarioOdoo: 'BANCO_BCOL_CO', sede: 'DMA'  },
+  { id: 'pc14', tipoAsiento: 'consignaciones a riogrande',detalleAsiento: 'CFA',                       cuenta: '133133',  idExternoOdoo: '',              diarioOdoo: 'BANCO_CFA',     sede: 'DMA'  },
+  { id: 'pc15', tipoAsiento: 'anticipos a aliados',       detalleAsiento: 'Anticipo Alpina',           cuenta: '280521',  idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc16', tipoAsiento: 'anticipos a aliados',       detalleAsiento: 'Anticipo Cárnicos',         cuenta: '280521',  idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc17', tipoAsiento: 'anticipo de nomina',        detalleAsiento: 'Anticipo Nómina',           cuenta: '130303',  idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc18', tipoAsiento: 'anticipo de nomina',        detalleAsiento: 'Anticipo Pasajes',          cuenta: '130303',  idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc19', tipoAsiento: 'aprovechamientos',          detalleAsiento: 'Aprovechamientos',          cuenta: '4200011', idExternoOdoo: '',              diarioOdoo: '',              sede: null   },
+  { id: 'pc20', tipoAsiento: 'traslado entre cajas',      detalleAsiento: 'Caja menor DMA',            cuenta: '4200011', idExternoOdoo: '',              diarioOdoo: 'CAJA_MENOR_DMA',sede: 'DMA'  },
+  { id: 'pc21', tipoAsiento: 'traslado entre cajas',      detalleAsiento: 'TVS QBO',                   cuenta: '4200015', idExternoOdoo: '',              diarioOdoo: 'TVS_QBO',       sede: 'QBO'  },
+  { id: 'pc22', tipoAsiento: 'traslado entre cajas',      detalleAsiento: 'Istmina QBO',               cuenta: '4200017', idExternoOdoo: '',              diarioOdoo: 'ISTMINA_QBO',   sede: 'QBO'  },
+];
+
+export const cuentasAnaliticasMock = [
+  { id: 'cta1', sede: 'DMA', nombre: 'DMA-Alpina 100%',            codigoOdoo: '{"7":100}'      },
+  { id: 'cta2', sede: 'DMA', nombre: 'DMA-Cárnicos 100%',          codigoOdoo: '{"8":100}'      },
+  { id: 'cta3', sede: 'DMA', nombre: 'DMA-Familia 100%',           codigoOdoo: '{"9":100}'      },
+  { id: 'cta4', sede: 'DMA', nombre: 'DMA-Alpina+Cárnicos 50/50',  codigoOdoo: '{"7":50,"8":50}'},
+  { id: 'cta5', sede: 'CAC', nombre: 'CAC-Alpina 100%',            codigoOdoo: '{"10":100}'     },
+  { id: 'cta6', sede: 'QBO', nombre: 'QBO-Cárnicos 100%',          codigoOdoo: '{"14":100}'     },
 ];
