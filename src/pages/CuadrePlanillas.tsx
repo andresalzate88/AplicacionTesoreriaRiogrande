@@ -36,40 +36,40 @@ interface ConsigAliadoCert {
 
 // Consignaciones Riogrande — disponibles en extracto
 const consigDisponiblesMock: ConsigDisponible[] = [
-  { id: 'c1', fecha: '11/04/2026', banco: 'Bancolombia Cta1', referencia: 'REF-2847361', valor: 3000000,  bloqueada: false },
-  { id: 'c2', fecha: '11/04/2026', banco: 'Bancolombia Cta1', referencia: 'REF-2847390', valor: 2000000,  bloqueada: false },
-  { id: 'c3', fecha: '12/04/2026', banco: 'CFA',              referencia: 'REF-0091234', valor: 1000000,  bloqueada: false },
-  { id: 'c4', fecha: '11/04/2026', banco: 'Bancolombia Cta2', referencia: 'REF-5512890', valor: 4124400,  bloqueada: true  },
+  { id: 'c1', fecha: '11/04/2026', banco: 'Bancolombia Cta1', referencia: 'REF-2847361', valor: 3000000, bloqueada: false },
+  { id: 'c2', fecha: '11/04/2026', banco: 'Bancolombia Cta1', referencia: 'REF-2847390', valor: 2000000, bloqueada: false },
+  { id: 'c3', fecha: '12/04/2026', banco: 'CFA', referencia: 'REF-0091234', valor: 1000000, bloqueada: false },
+  { id: 'c4', fecha: '11/04/2026', banco: 'Bancolombia Cta2', referencia: 'REF-5512890', valor: 4124400, bloqueada: true },
 ];
 
 // Consignaciones ya seleccionadas (mock inicial)
 const consigSeleccionadasIniciales: ConsigSeleccionada[] = [
   { id: 'c1', fecha: '11/04/2026', banco: 'Bancolombia Cta1', referencia: 'REF-2847361', valor: 3000000 },
-  { id: 'c3', fecha: '12/04/2026', banco: 'CFA',              referencia: 'REF-0091234', valor: 1000000 },
+  { id: 'c3', fecha: '12/04/2026', banco: 'CFA', referencia: 'REF-0091234', valor: 1000000 },
 ];
 
 // Consignaciones aliados certificadas por aliado
 const consigAliadosCertMock: Record<string, ConsigAliadoCert[]> = {
   Cárnicos: [
     { id: 'ca1', fecha: '11/04/2026', banco: 'Bancolombia Cta1', referencia: 'CAR-001234', valor: 2400000, bloqueada: false },
-    { id: 'ca2', fecha: '10/04/2026', banco: 'Davivienda',        referencia: 'CAR-001189', valor: 1800000, bloqueada: true  },
+    { id: 'ca2', fecha: '10/04/2026', banco: 'Davivienda', referencia: 'CAR-001189', valor: 1800000, bloqueada: true },
   ],
   Nutresa: [
-    { id: 'nu1', fecha: '11/04/2026', banco: 'BBVA',             referencia: 'NUT-003412', valor: 1200000, bloqueada: false },
+    { id: 'nu1', fecha: '11/04/2026', banco: 'BBVA', referencia: 'NUT-003412', valor: 1200000, bloqueada: false },
   ],
   Meals: [
-    { id: 'me1', fecha: '11/04/2026', banco: 'Bancolombia Cta1', referencia: 'MEA-000891', valor: 950000,  bloqueada: false },
+    { id: 'me1', fecha: '11/04/2026', banco: 'Bancolombia Cta1', referencia: 'MEA-000891', valor: 950000, bloqueada: false },
   ],
 };
 
-const conductoresMock  = ['Juan García', 'Carlos López', 'Pedro Martínez'];
-const placasMock       = ['NTB-432', 'OPQ-871', 'KLM-234'];
-const ALIADOS24        = ['Alpina', 'Cárnicos', 'Nutresa', 'Meals'] as const;
-type Aliado24          = typeof ALIADOS24[number];
+const conductoresMock = ['Juan García', 'Carlos López', 'Pedro Martínez'];
+const placasMock = ['NTB-432', 'OPQ-871', 'KLM-234'];
+const ALIADOS24 = ['Alpina', 'Cárnicos', 'Nutresa', 'Meals'] as const;
+type Aliado24 = typeof ALIADOS24[number];
 
 // Anticipos mock de clientes (en la sección 2.1)
 const anticiposMock21 = [
-  { planilla: 'DA-32926', numero: 'ANT-00045', cliente: 'Tienda La Esquina',  valor:  500000 },
+  { planilla: 'DA-32926', numero: 'ANT-00045', cliente: 'Tienda La Esquina', valor: 500000 },
   { planilla: 'DA-32937', numero: 'ANT-00046', cliente: 'Supermercado Norte', valor: -200000 },
 ];
 
@@ -93,6 +93,8 @@ interface GastoRuta22 {
   retencionNombre: string;
   retencionPct: number;
   valorBase: number;
+  valorImpuesto: number;
+  valorRetencion: number;
   superaTope: boolean;
   justificacion: string;
 }
@@ -107,23 +109,23 @@ interface Proveedor22 {
 }
 
 const parametrosGasto22 = [
-  { id: 'g1', nombre_asiento: 'Peajes',               requiere_documento_electronico: true,  tope_maximo: 50000  },
-  { id: 'g2', nombre_asiento: 'Combustible',           requiere_documento_electronico: true,  tope_maximo: 100000 },
-  { id: 'g3', nombre_asiento: 'Alimentación',          requiere_documento_electronico: false, tope_maximo: 50000  },
-  { id: 'g4', nombre_asiento: 'Mantenimiento vehículo',requiere_documento_electronico: true,  tope_maximo: 80000  },
-  { id: 'g5', nombre_asiento: 'Parqueadero',           requiere_documento_electronico: false, tope_maximo: 30000  },
+  { id: 'g1', nombre_asiento: 'Peajes', requiere_documento_electronico: true, tope_maximo: 50000 },
+  { id: 'g2', nombre_asiento: 'Combustible', requiere_documento_electronico: true, tope_maximo: 100000 },
+  { id: 'g3', nombre_asiento: 'Alimentación', requiere_documento_electronico: false, tope_maximo: 50000 },
+  { id: 'g4', nombre_asiento: 'Mantenimiento vehículo', requiere_documento_electronico: true, tope_maximo: 80000 },
+  { id: 'g5', nombre_asiento: 'Parqueadero', requiere_documento_electronico: false, tope_maximo: 30000 },
 ];
 
 const proveedoresInit: Proveedor22[] = [
   { id: 'p1', nit: '900123456', nombre: 'Concesión Vial 4G', tipoTercero: 'Jurídico', tipoIdentificacion: 'NIT', sincronizado_odoo: true },
-  { id: 'p2', nit: '900456789', nombre: 'EDS El Nogal',      tipoTercero: 'Jurídico', tipoIdentificacion: 'NIT', sincronizado_odoo: true },
-  { id: 'p3', nit: '800111333', nombre: 'Parqueadero Central',tipoTercero: 'Jurídico', tipoIdentificacion: 'NIT', sincronizado_odoo: true },
+  { id: 'p2', nit: '900456789', nombre: 'EDS El Nogal', tipoTercero: 'Jurídico', tipoIdentificacion: 'NIT', sincronizado_odoo: true },
+  { id: 'p3', nit: '800111333', nombre: 'Parqueadero Central', tipoTercero: 'Jurídico', tipoIdentificacion: 'NIT', sincronizado_odoo: true },
 ];
 
 const cuentasAnaliticas22 = [
-  { id: 'ca1', nombre: 'DMA-Alpina 100%'           },
+  { id: 'ca1', nombre: 'DMA-Alpina 100%' },
   { id: 'ca2', nombre: 'DMA-Alpina+Cárnicos 50/50' },
-  { id: 'ca3', nombre: 'DMA-Cárnicos 100%'         },
+  { id: 'ca3', nombre: 'DMA-Cárnicos 100%' },
 ];
 
 const tiposImpuesto22 = [
@@ -134,9 +136,9 @@ const tiposImpuesto22 = [
 ];
 
 const retencionesProveedor = [
-  { id: 'r1', nombre: 'Retefte 2.5%',  pct: 2.5   },
-  { id: 'r2', nombre: 'Retefte 3.5%',  pct: 3.5   },
-  { id: 'r3', nombre: 'Reteica 0.414%',pct: 0.414 },
+  { id: 'r1', nombre: 'Retefte 2.5%', pct: 2.5 },
+  { id: 'r2', nombre: 'Retefte 3.5%', pct: 3.5 },
+  { id: 'r3', nombre: 'Reteica 0.414%', pct: 0.414 },
 ];
 
 const gastosMock22: GastoRuta22[] = [
@@ -146,7 +148,7 @@ const gastosMock22: GastoRuta22[] = [
     proveedorNit: '900123456', proveedorNombre: 'Concesión Vial 4G',
     nFactura: 'FE-001', cuentaAnaliticaId: 'ca1', cuentaAnaliticaNombre: 'DMA-Alpina 100%',
     tipoImpuestoId: 'imp2', tipoImpuestoNombre: 'IVA base 19 compras', retencionId: '', retencionNombre: '', retencionPct: 0,
-    valorBase: 25000, superaTope: false, justificacion: '',
+    valorBase: 25000, valorImpuesto: 0, valorRetencion: 0, superaTope: false, justificacion: '',
   },
   {
     id: 'g22-2', tipoGastoId: 'g2', tipoGastoNombre: 'Combustible',
@@ -154,15 +156,15 @@ const gastosMock22: GastoRuta22[] = [
     proveedorNit: '900456789', proveedorNombre: 'EDS El Nogal',
     nFactura: 'FE-002', cuentaAnaliticaId: 'ca2', cuentaAnaliticaNombre: 'DMA-Alpina+Cárnicos 50/50',
     tipoImpuestoId: 'imp3', tipoImpuestoNombre: 'Impuesto al consumo', retencionId: 'r1', retencionNombre: 'Retefte 2.5%', retencionPct: 2.5,
-    valorBase: 80000, superaTope: false, justificacion: '',
+    valorBase: 80000, valorImpuesto: 0, valorRetencion: 0, superaTope: false, justificacion: '',
   },
 ];
 
 // ── §2.6 — Anticipos de nómina ──
 type Concepto26 = 'ANT_NOMINA' | 'PASAJE' | 'ANT_VIATICOS';
 const conceptoLabels: Record<Concepto26, string> = {
-  ANT_NOMINA:   'Anticipo de nómina',
-  PASAJE:       'Pasaje',
+  ANT_NOMINA: 'Anticipo de nómina',
+  PASAJE: 'Pasaje',
   ANT_VIATICOS: 'Anticipo viáticos',
 };
 interface AnticipoNomina26 {
@@ -174,7 +176,7 @@ interface AnticipoNomina26 {
   valor: number;
 }
 const anticiposMock26: AnticipoNomina26[] = [
-  { id: 'an1', empleado: 'Juan García',  concepto: 'ANT_NOMINA',   cuentaAnaliticaId: 'ca1', cuentaAnaliticaNombre: 'DMA-Alpina 100%',           valor: 70000  },
+  { id: 'an1', empleado: 'Juan García', concepto: 'ANT_NOMINA', cuentaAnaliticaId: 'ca1', cuentaAnaliticaNombre: 'DMA-Alpina 100%', valor: 70000 },
   { id: 'an2', empleado: 'Carlos López', concepto: 'ANT_VIATICOS', cuentaAnaliticaId: 'ca2', cuentaAnaliticaNombre: 'DMA-Alpina+Cárnicos 50/50', valor: 150000 },
 ];
 
@@ -187,17 +189,17 @@ const CuadrePlanillas = () => {
   const [currentStep] = useState(7); // step 7 = Resumen (último)
 
   // ── Tripulación ──
-  const [conductor,  setConductor]  = useState('Juan García');
-  const [auxiliar1,  setAuxiliar1]  = useState('Carlos López');
-  const [auxiliar2,  setAuxiliar2]  = useState('Ninguno');
-  const [placa,      setPlaca]      = useState('NTB-432');
+  const [conductor, setConductor] = useState('Juan García');
+  const [auxiliar1, setAuxiliar1] = useState('Carlos López');
+  const [auxiliar2, setAuxiliar2] = useState('Ninguno');
+  const [placa, setPlaca] = useState('NTB-432');
 
   // ── Gastos / anticipos nómina ──
   const [gastos22, setGastos22] = useState<GastoRuta22[]>(gastosMock22);
   const [anticipos26, setAnticipos26] = useState<AnticipoNomina26[]>(anticiposMock26);
 
   // ── Sección 2.3 — Consig. Riogrande ──
-  const [consigDisponibles]    = useState<ConsigDisponible[]>(consigDisponiblesMock);
+  const [consigDisponibles] = useState<ConsigDisponible[]>(consigDisponiblesMock);
   const [consigSeleccionadas, setConsigSeleccionadas] = useState<ConsigSeleccionada[]>(consigSeleccionadasIniciales);
 
   const toggleConsigRG = (c: ConsigDisponible) => {
@@ -242,34 +244,32 @@ const CuadrePlanillas = () => {
   const [provDropOpen, setProvDropOpen] = useState<string | null>(null);
   const [showModalProv, setShowModalProv] = useState(false);
   const [modalProvGastoId, setModalProvGastoId] = useState<string | null>(null);
-  const [nuevoNit, setNuevoNit]     = useState('');
+  const [nuevoNit, setNuevoNit] = useState('');
   const [nuevoDigito, setNuevoDigito] = useState('');
   const [nuevoNombre, setNuevoNombre] = useState('');
-  const [nuevoTipo, setNuevoTipo]   = useState<'Natural'|'Jurídico'>('Jurídico');
+  const [nuevoTipo, setNuevoTipo] = useState<'Natural' | 'Jurídico'>('Jurídico');
   const [nuevoTipoId, setNuevoTipoId] = useState('NIT');
   const [retencionRow, setRetencionRow] = useState<string | null>(null);
 
   // ── Cálculos ──
   const selectedNums = planillasMock.filter(p => selectedPlanillas.includes(p.id)).map(p => p.numero);
 
-  const totalContado      = facturasMock.filter(f => f.crco === 'CONTADO').reduce((s, f) => s + f.totalCuadrar, 0);
-  const totalAnticipos21  = anticiposMock21.reduce((s, a) => s + a.valor, 0); // neto (puede ser < 0)
+  const totalContado = facturasMock.filter(f => f.crco === 'CONTADO').reduce((s, f) => s + f.totalCuadrar, 0);
+  const totalAnticipos21 = anticiposMock21.reduce((s, a) => s + a.valor, 0); // neto (puede ser < 0)
   const totalGastos = gastos22.reduce((s, g) => {
-    const iva = Math.round(g.valorBase * g.tarifaIva / 100);
-    const ret = Math.round(g.valorBase * g.retencionPct / 100);
-    return s + g.valorBase + iva - ret;
+    return s + g.valorBase + (g.valorImpuesto || 0) - (g.valorRetencion || 0);
   }, 0);
-  const totalConsigRio    = consigSeleccionadas.reduce((s, c) => s + c.valor, 0);
-  const totalConsigAli    = (() => {
+  const totalConsigRio = consigSeleccionadas.reduce((s, c) => s + c.valor, 0);
+  const totalConsigAli = (() => {
     if (aliadoActivo === 'Alpina') return consigAlpina.reduce((s, c) => s + c.valor, 0);
     const cert = certSeleccionadas[aliadoActivo] || [];
     return cert.reduce((s, c) => s + c.valor, 0);
   })();
-  const totalAnticipos    = anticipos26.reduce((s, a) => s + a.valor, 0);
-  const efectivoTeorico   = totalContado + totalAnticipos21 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos;
-  const diferencia        = efectivoReal - efectivoTeorico;
-  const aprovechamientos  = diferencia > 0 ? diferencia : 0;
-  const diferenciaFinal   = totalContado + totalAnticipos21 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos - efectivoReal + aprovechamientos;
+  const totalAnticipos = anticipos26.reduce((s, a) => s + a.valor, 0);
+  const efectivoTeorico = totalContado + totalAnticipos21 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos;
+  const diferencia = efectivoReal - efectivoTeorico;
+  const aprovechamientos = diferencia > 0 ? diferencia : 0;
+  const diferenciaFinal = totalContado + totalAnticipos21 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos - efectivoReal + aprovechamientos;
 
   return (
     <div className="p-8 animate-fade-in">
@@ -288,9 +288,8 @@ const CuadrePlanillas = () => {
       <div className="flex items-center gap-1 mb-8 overflow-x-auto">
         {steps.map((step, i) => (
           <div key={step} className="flex items-center">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium ${
-              i <= currentStep ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-            }`}>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium ${i <= currentStep ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}>
               <span className="w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center text-xs">{i + 1}</span>
               {step}
             </div>
@@ -480,7 +479,7 @@ const CuadrePlanillas = () => {
                 proveedorNit: '', proveedorNombre: '', nFactura: '',
                 cuentaAnaliticaId: cuentasAnaliticas22[0].id, cuentaAnaliticaNombre: cuentasAnaliticas22[0].nombre,
                 tipoImpuestoId: 'imp0', tipoImpuestoNombre: 'Sin impuesto', retencionId: '', retencionNombre: '', retencionPct: 0,
-                valorBase: 0, superaTope: false, justificacion: '', fecha: new Date().toISOString().split('T')[0],
+                valorBase: 0, valorImpuesto: 0, valorRetencion: 0, superaTope: false, justificacion: '', fecha: new Date().toISOString().split('T')[0],
               }]);
             }}
             className="flex items-center gap-2 text-sm text-primary hover:bg-accent px-3 py-1.5 rounded-md transition-colors"
@@ -509,10 +508,7 @@ const CuadrePlanillas = () => {
             </thead>
             <tbody>
               {gastos22.map((g) => {
-                const pct = tiposImpuesto22.find(t => t.id === g.tipoImpuestoId)?.pct || 0;
-                const ivaCalc  = Math.round(g.valorBase * pct / 100);
-                const retCalc  = Math.round(g.valorBase * g.retencionPct / 100);
-                const total    = g.valorBase + ivaCalc - retCalc;
+                const total = g.valorBase + (g.valorImpuesto || 0) - (g.valorRetencion || 0);
                 const superaTope = total > g.topeMaximo;
                 const searchVal = provSearch[g.id] ?? `${g.proveedorNombre}${g.proveedorNombre && g.proveedorNit ? ' / ' : ''}${g.proveedorNit}`;
                 const filteredProvs = proveedores22.filter(p =>
@@ -538,7 +534,7 @@ const CuadrePlanillas = () => {
                             className="w-full border border-border rounded px-2 py-1.5 text-sm bg-background mt-1"
                             title="Máximo 2 días hacia atrás y 0 días hacia adelante respecto a la fecha del cuadre"
                           />
-                          <p className="text-[10px] text-muted-foreground mt-1 leading-tight">Máx. 2 días hacia atrás<br/>0 días hacia adelante</p>
+                          <p className="text-[10px] text-muted-foreground mt-1 leading-tight">Máx. 2 días hacia atrás<br />0 días hacia adelante</p>
                         </div>
                       </td>
 
@@ -679,18 +675,38 @@ const CuadrePlanillas = () => {
                         </div>
                       </td>
 
-                      {/* 8. VALOR IMPUESTO — calculado, visible si tarifaIva > 0 */}
-                      <td className="px-2 py-2 text-right font-mono">
-                        {g.tarifaIva > 0 ? (
-                          <span className="text-blue-600 dark:text-blue-400">{formatCurrency(ivaCalc)}</span>
-                        ) : <span className="text-muted-foreground">—</span>}
+                      {/* 8. VALOR IMPUESTO (Manual) */}
+                      <td className="px-2 py-2">
+                        <div className="flex justify-end">
+                          <input
+                            type="text"
+                            value={g.valorImpuesto === 0 ? '' : g.valorImpuesto.toLocaleString('es-CO')}
+                            onChange={e => {
+                              const v = parseInt(e.target.value.replace(/\D/g, '')) || 0;
+                              updateG({ valorImpuesto: v });
+                            }}
+                            disabled={!g.tipoImpuestoId || g.tipoImpuestoId === 'imp0'}
+                            placeholder="0"
+                            className="border border-input rounded px-1.5 py-1 bg-background text-xs w-24 text-right font-mono focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                          />
+                        </div>
                       </td>
 
-                      {/* 9. RETENCIÓN $ — calculado, visible si hay retención */}
-                      <td className="px-2 py-2 text-right font-mono">
-                        {g.retencionId ? (
-                          <span className="text-amber-600 dark:text-amber-400">−{formatCurrency(retCalc)}</span>
-                        ) : <span className="text-muted-foreground">—</span>}
+                      {/* 9. VALOR RETENCIÓN (Manual) */}
+                      <td className="px-2 py-2">
+                        <div className="flex justify-end">
+                          <input
+                            type="text"
+                            value={g.valorRetencion === 0 ? '' : g.valorRetencion.toLocaleString('es-CO')}
+                            onChange={e => {
+                              const v = parseInt(e.target.value.replace(/\D/g, '')) || 0;
+                              updateG({ valorRetencion: v });
+                            }}
+                            disabled={!g.retencionId}
+                            placeholder="0"
+                            className="border border-input rounded px-1.5 py-1 bg-background text-xs w-24 text-right font-mono focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                          />
+                        </div>
                       </td>
 
                       {/* 10. TOTAL — solo lectura */}
@@ -772,7 +788,7 @@ const CuadrePlanillas = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Tipo tercero</label>
-                  <select value={nuevoTipo} onChange={e => setNuevoTipo(e.target.value as 'Natural'|'Jurídico')} className="w-full border border-input rounded px-2.5 py-1.5 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                  <select value={nuevoTipo} onChange={e => setNuevoTipo(e.target.value as 'Natural' | 'Jurídico')} className="w-full border border-input rounded px-2.5 py-1.5 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                     <option>Natural</option>
                     <option>Jurídico</option>
                   </select>
@@ -929,11 +945,10 @@ const CuadrePlanillas = () => {
             <button
               key={a}
               onClick={() => setAliadoActivo(a)}
-              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                aliadoActivo === a
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
+              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${aliadoActivo === a
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
             >
               {a}
             </button>
@@ -1123,15 +1138,14 @@ const CuadrePlanillas = () => {
             </div>
             <div>
               <label className="text-sm text-muted-foreground mb-2 block">Diferencia</label>
-              <div className={`text-2xl font-bold rounded-lg px-4 py-3 ${
-                diferencia >= 0 ? 'text-success bg-success/10' : 'text-destructive bg-destructive/10'
-              }`}>
+              <div className={`text-2xl font-bold rounded-lg px-4 py-3 ${diferencia >= 0 ? 'text-success bg-success/10' : 'text-destructive bg-destructive/10'
+                }`}>
                 {formatCurrency(diferencia)}
               </div>
               <p className={`text-sm mt-2 font-medium ${diferencia > 0 ? 'text-success' : diferencia === 0 ? 'text-success' : 'text-destructive'}`}>
-                {diferencia > 0  && 'Sobrante → va a Aprovechamientos'}
+                {diferencia > 0 && 'Sobrante → va a Aprovechamientos'}
                 {diferencia === 0 && '✓ Cuadra exacto'}
-                {diferencia < 0  && '⚠ Faltante — debe registrar anticipo de nómina'}
+                {diferencia < 0 && '⚠ Faltante — debe registrar anticipo de nómina'}
               </p>
             </div>
           </div>

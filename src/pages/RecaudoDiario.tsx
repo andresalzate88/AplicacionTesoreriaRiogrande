@@ -47,6 +47,10 @@ const RecaudoDiario = () => {
   const [addDestinoNombre, setAddDestinoNombre] = useState('');
   const [addValor, setAddValor] = useState(0);
   const [addDetalle, setAddDetalle] = useState('');
+  const [addTipoImpuesto, setAddTipoImpuesto] = useState('Sin impuesto');
+  const [addValorImpuesto, setAddValorImpuesto] = useState(0);
+  const [addRetencion, setAddRetencion] = useState('');
+  const [addValorRetencion, setAddValorRetencion] = useState(0);
 
   const totalEfectivoPlanillas = cuadresMock.reduce((s, c) => s + c.efectivo, 0);
   const totalDispersado = destinos.reduce((s, d) => s + d.valor, 0);
@@ -124,7 +128,7 @@ const RecaudoDiario = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">3.2 — Destinos de efectivo</h3>
           <button
-            onClick={() => { setShowAddModal(true); setAddTipo(''); setAddDestinoNombre(''); setAddValor(0); setAddDetalle(''); }}
+            onClick={() => { setShowAddModal(true); setAddTipo(''); setAddDestinoNombre(''); setAddValor(0); setAddDetalle(''); setAddTipoImpuesto('Sin impuesto'); setAddValorImpuesto(0); setAddRetencion(''); setAddValorRetencion(0); }}
             className="flex items-center gap-2 text-sm bg-primary text-primary-foreground hover:opacity-90 px-4 py-2 rounded-md transition-opacity shadow-sm"
           >
             <Plus className="h-4 w-4" /> Agregar Destino
@@ -171,6 +175,18 @@ const RecaudoDiario = () => {
 
               {addTipo === 'Gasto' && addDestinoNombre && (
                 <div className="grid grid-cols-3 gap-3 p-4 bg-muted/30 rounded-md border border-border animate-fade-in">
+                  {/* Fecha del gasto */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Fecha del gasto</label>
+                    <input
+                      type="date"
+                      defaultValue={new Date().toISOString().split('T')[0]}
+                      className="w-full border border-input rounded px-2 py-1 bg-background text-sm"
+                      title="Máximo 2 días hacia atrás y 0 días hacia adelante"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-tight">Máx. 2 días hacia atrás · 0 días hacia adelante</p>
+                  </div>
+                  {/* Proveedor */}
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Proveedor</label>
                     <div className="flex gap-1">
@@ -178,27 +194,92 @@ const RecaudoDiario = () => {
                       <button className="bg-primary text-primary-foreground px-2 rounded shrink-0"><Plus className="h-3 w-3" /></button>
                     </div>
                   </div>
+                  {/* N° Factura */}
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">N° Factura</label>
                     <input placeholder="OPCIONAL" className="w-full border border-input rounded px-2 py-1 bg-background text-sm" />
                   </div>
+                  {/* Cuenta analítica */}
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Cuenta analítica</label>
                     <select className="w-full border border-input rounded px-2 py-1 bg-background text-sm">
                       <option>DMA-Alpina 100%</option>
+                      <option>DMA-Alpina+Cárnicos 50/50</option>
+                      <option>DMA-Cárnicos 100%</option>
                     </select>
                   </div>
+                  {/* Tipo Impuesto */}
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Tarifa IVA</label>
-                    <select className="w-full border border-input rounded px-2 py-1 bg-background text-sm"><option>0%</option><option>5%</option><option>19%</option></select>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Tipo Impuesto</label>
+                    <select
+                      value={addTipoImpuesto}
+                      onChange={(e) => {
+                        setAddTipoImpuesto(e.target.value);
+                        if (e.target.value === 'Sin impuesto') setAddValorImpuesto(0);
+                      }}
+                      className="w-full border border-input rounded px-2 py-1 bg-background text-sm"
+                    >
+                      <option value="Sin impuesto">Sin impuesto</option>
+                      <option value="IVA base 5 compras">IVA base 5 compras</option>
+                      <option value="IVA base 19 compras">IVA base 19 compras</option>
+                      <option value="Impuesto al consumo">Impuesto al consumo</option>
+                    </select>
                   </div>
+                  {/* Valor impuesto */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Valor impuesto ($)</label>
+                    <input
+                      type="number"
+                      disabled={addTipoImpuesto === 'Sin impuesto'}
+                      value={addValorImpuesto === 0 ? '' : addValorImpuesto}
+                      onChange={e => setAddValorImpuesto(Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full border border-input rounded px-2 py-1 bg-background text-sm disabled:opacity-50"
+                    />
+                  </div>
+                  {/* Retención */}
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Retención</label>
-                    <select className="w-full border border-input rounded px-2 py-1 bg-background text-sm"><option>— Sin retención</option></select>
+                    <select
+                      value={addRetencion}
+                      onChange={e => { setAddRetencion(e.target.value); if (!e.target.value) setAddValorRetencion(0); }}
+                      className="w-full border border-input rounded px-2 py-1 bg-background text-sm"
+                    >
+                      <option value="">— Sin retención</option>
+                      <option value="Retefte 2.5%">Retefte 2.5%</option>
+                      <option value="Retefte 3.5%">Retefte 3.5%</option>
+                      <option value="Reteica 0.414%">Reteica 0.414%</option>
+                    </select>
                   </div>
+                  {/* Valor retención */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Valor retención ($)</label>
+                    <input
+                      type="number"
+                      disabled={!addRetencion}
+                      value={addValorRetencion === 0 ? '' : addValorRetencion}
+                      onChange={e => setAddValorRetencion(Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full border border-input rounded px-2 py-1 bg-background text-sm disabled:opacity-50"
+                    />
+                  </div>
+                  {/* Valor base */}
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Valor base</label>
-                    <input type="number" onChange={e => setAddValor(Number(e.target.value))} className="w-full border border-input rounded px-2 py-1 bg-background text-sm" />
+                    <input
+                      type="number"
+                      value={addValor === 0 ? '' : addValor}
+                      onChange={e => setAddValor(Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full border border-input rounded px-2 py-1 bg-background text-sm"
+                    />
+                  </div>
+                  {/* Total a pagar (solo lectura) */}
+                  <div className="col-span-2">
+                    <label className="block text-xs font-bold text-foreground mb-1">Total a pagar ($)</label>
+                    <div className="w-full border border-primary/40 rounded px-3 py-2 bg-primary/5 text-sm font-mono font-bold text-primary">
+                      {formatCurrency((addValor || 0) + (addValorImpuesto || 0) - (addValorRetencion || 0))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -253,7 +334,10 @@ const RecaudoDiario = () => {
                 <button
                   disabled={!addTipo || !addDestinoNombre || addValor <= 0}
                   onClick={() => {
-                    setDestinos([...destinos, { id: String(Date.now()), tipo: addTipo as TipoDestino32, destinoNombre: addDestinoNombre, detalle: addDetalle || '—', valor: addValor }]);
+                    const finalValue = addTipo === 'Gasto'
+                      ? (addValor || 0) + (addValorImpuesto || 0) - (addValorRetencion || 0)
+                      : addValor;
+                    setDestinos([...destinos, { id: String(Date.now()), tipo: addTipo as TipoDestino32, destinoNombre: addDestinoNombre, detalle: addDetalle || '—', valor: finalValue }]);
                     setShowAddModal(false);
                   }}
                   className="bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
