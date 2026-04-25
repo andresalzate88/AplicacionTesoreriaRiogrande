@@ -125,9 +125,16 @@ const Revision = () => {
         <div className="fixed inset-0 bg-foreground/40 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg border border-border shadow-lg p-8 max-w-md w-full animate-fade-in text-center">
             <CheckSquare className="h-12 w-12 text-success mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-foreground mb-2">Día aprobado</h3>
-            <p className="text-muted-foreground mb-6">El día 11/04/2026 ha sido aprobado exitosamente.</p>
-            <button onClick={() => setShowApprove(false)} className="bg-primary text-primary-foreground px-6 py-2.5 rounded-md text-sm font-medium">Cerrar</button>
+            <h3 className="text-xl font-bold text-foreground mb-2">Aprobar día</h3>
+            <p className="text-muted-foreground mb-3">El día 11/04/2026 quedará aprobado.</p>
+            <p className="text-sm text-muted-foreground/80 mb-6 bg-muted/40 rounded-md px-4 py-3 border border-border">
+              <Send className="h-3.5 w-3.5 inline mr-1.5 text-primary" />
+              Al aprobar, las transacciones Odoo quedan listas para envío directo a Odoo vía API.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button onClick={() => setShowApprove(false)} className="border border-border px-5 py-2.5 rounded-md text-sm font-medium hover:bg-muted">Cancelar</button>
+              <button onClick={() => setShowApprove(false)} className="bg-success text-success-foreground px-6 py-2.5 rounded-md text-sm font-semibold hover:opacity-90">Confirmar aprobación</button>
+            </div>
           </div>
         </div>
       )}

@@ -125,6 +125,7 @@ export const checklistItems: ChecklistItem[] = [
   { id: 9, descripcion: 'Soportes destinos de efectivo', estado: '', nota: '' },
   { id: 10, descripcion: 'Arqueo de efectivo', estado: '', nota: '' },
   { id: 11, descripcion: 'Denuncias por hurto', estado: '', nota: '' },
+  { id: 12, descripcion: 'Transacciones listas para Odoo', estado: '', nota: '' },
 ];
 
 export const aliados = [
