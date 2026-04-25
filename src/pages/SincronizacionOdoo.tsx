@@ -39,10 +39,18 @@ const mockProveedores: SyncData[] = [
   { id: '2', nit: '800456789', nombre: 'EDS El Nogal', tipoTercero: 'Jurídico', estado: 'ERROR', error: 'Nombre requerido en Odoo' }
 ];
 
-const mockAsientos: SyncData[] = [
-  { id: '1', fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'RETENCION_CLIENTE', debito: '13551525', credito: '130501', valor: 7578, estado: 'PENDIENTE', nit: '', nombre: '' },
-  { id: '2', fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'GASTO', debito: '520101', credito: '130501', valor: 29750, estado: 'CONFIRMADO', nit: '', nombre: '' },
-  { id: '3', fecha: '19/04/2026', referencia: 'DMA-RD-190426', tipo: 'CONSIGNACION_RG', debito: '133131313', credito: '130501', valor: 3000000, estado: 'ERROR', error: 'Diario no configurado', nit: '', nombre: '' }
+const mockTransacciones = [
+  { id: '1', fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'RETENCION_CLIENTE',  nit: '1039760460', nombre: 'Tienda El Sol',       valor: 7578,    estado: 'PENDIENTE'  as const, error: '' },
+  { id: '2', fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'GASTO_CAUSACION',    nit: '900123456',  nombre: 'Concesión Vial 4G',  valor: 25000,   estado: 'CONFIRMADO' as const, error: '' },
+  { id: '3', fecha: '19/04/2026', referencia: 'DMA-RD-190426', tipo: 'CONSIGNACION_RG',    nit: '',           nombre: '',                    valor: 3000000, estado: 'ERROR'      as const, error: 'Diario no configurado' },
+  { id: '4', fecha: '19/04/2026', referencia: 'DMA-110426.01', tipo: 'ANTICIPO_NOMINA',    nit: '1037567890', nombre: 'Carlos Pérez',        valor: 50000,   estado: 'PENDIENTE'  as const, error: '' },
+  { id: '5', fecha: '19/04/2026', referencia: 'DMA-110426.02', tipo: 'GASTO_EGRESO',       nit: '900456789',  nombre: 'EDS El Nogal',        valor: 80000,   estado: 'ENVIADO'    as const, error: '' },
+  { id: '6', fecha: '19/04/2026', referencia: 'DMA-RD-190426', tipo: 'TRASLADO_CAJA',      nit: '',           nombre: 'Caja menor DMA',      valor: 500000,  estado: 'PENDIENTE'  as const, error: '' },
+];
+
+const mockEmpleadosSinOdoo = [
+  { nit: '1017234567', nombre: 'Andrés Ríos',    sede: 'DMA', cargo: 'AUXILIAR_RUTA' },
+  { nit: '1035678901', nombre: 'Diana López',    sede: 'QBO', cargo: 'AUXILIAR_RUTA' },
 ];
 
 const SincronizacionOdoo = () => {
@@ -52,7 +60,7 @@ const SincronizacionOdoo = () => {
   const pendingClientes = mockClientes.filter(c => c.estado === 'PENDIENTE' || c.estado === 'ERROR').length;
   const pendingDocumentos = mockDocumentos.filter(d => d.estadoEnvio === 'PENDIENTE ENVÍO').length;
   const pendingProveedores = mockProveedores.filter(p => p.estado === 'PENDIENTE' || p.estado === 'ERROR').length;
-  const pendingAsientos = mockAsientos.filter(a => a.estado === 'PENDIENTE' || a.estado === 'ERROR').length;
+  const pendingTransacciones = mockTransacciones.filter(a => a.estado === 'PENDIENTE' || a.estado === 'ERROR').length;
 
   const getBadgeColor = (estado: string) => {
     switch (estado) {
@@ -238,17 +246,51 @@ const SincronizacionOdoo = () => {
           </div>
         </section>
 
-        {/* BLOQUE 4 */}
+        {/* BLOQUE 4 — Empleados sin Odoo (alerta) */}
+        <section className="bg-card rounded-xl border border-warning/40 shadow-sm overflow-hidden">
+          <div className="border-b border-warning/30 p-4 bg-warning/5 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+            <div>
+              <h3 className="font-semibold text-lg text-foreground">4. Empleados sin registrar en Odoo</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">La creación en Odoo debe hacerse manualmente desde el módulo de nómina. Este bloque no bloquea el envío de transacciones.</p>
+            </div>
+            <span className="ml-auto px-2.5 py-1 rounded-full text-xs font-bold bg-warning/20 text-warning-foreground">{mockEmpleadosSinOdoo.length} sin sync</span>
+          </div>
+          <div className="p-0 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b border-border">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">NIT</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nombre</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sede</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cargo</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {mockEmpleadosSinOdoo.map((e, i) => (
+                  <tr key={i} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3 font-mono">{e.nit}</td>
+                    <td className="px-4 py-3 font-medium">{e.nombre}</td>
+                    <td className="px-4 py-3">{e.sede}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{e.cargo}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* BLOQUE 5 — Transacciones Pendientes */}
         <section className={`bg-card rounded-xl border border-border shadow-sm overflow-hidden transition-opacity ${(pendingClientes > 0 || pendingDocumentos > 0 || pendingProveedores > 0) ? 'opacity-50 pointer-events-none' : ''}`}>
           <div className="border-b border-border p-4 bg-muted/30 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h3 className="font-semibold text-lg text-foreground">4. Asientos Contables</h3>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${pendingAsientos > 0 ? 'bg-warning/20 text-warning-foreground' : 'bg-success/20 text-success-foreground'}`}>
-                {pendingAsientos} pendientes
+              <h3 className="font-semibold text-lg text-foreground">5. Transacciones Pendientes</h3>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${pendingTransacciones > 0 ? 'bg-warning/20 text-warning-foreground' : 'bg-success/20 text-success-foreground'}`}>
+                {pendingTransacciones} pendientes
               </span>
             </div>
             <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity">
-              <RefreshCw className="h-4 w-4" /> Sincronizar Asientos
+              <RefreshCw className="h-4 w-4" /> Sincronizar Transacciones
             </button>
           </div>
           <div className="p-0 overflow-x-auto">
@@ -258,26 +300,24 @@ const SincronizacionOdoo = () => {
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Referencia</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tipo</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Débito</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Crédito</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">NIT / Nombre</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Valor</th>
                   <th className="text-center px-4 py-3 font-medium text-muted-foreground">Estado</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Error</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {mockAsientos.map((a, i) => (
+                {mockTransacciones.map((t, i) => (
                   <tr key={i} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3">{a.fecha}</td>
-                    <td className="px-4 py-3 font-mono">{a.referencia}</td>
-                    <td className="px-4 py-3">{a.tipo}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{a.debito}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{a.credito}</td>
-                    <td className="px-4 py-3 text-right font-mono font-medium">{formatCurrency(a.valor || 0)}</td>
+                    <td className="px-4 py-3">{t.fecha}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{t.referencia}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{t.tipo}</td>
+                    <td className="px-4 py-3 text-xs">{t.nit ? `${t.nit} · ${t.nombre}` : t.nombre || '—'}</td>
+                    <td className="px-4 py-3 text-right font-mono font-medium">{formatCurrency(t.valor)}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${getBadgeColor(a.estado)}`}>{a.estado}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${getBadgeColor(t.estado)}`}>{t.estado}</span>
                     </td>
-                    <td className="px-4 py-3 text-destructive text-xs">{a.error || '—'}</td>
+                    <td className="px-4 py-3 text-destructive text-xs">{t.error || '—'}</td>
                   </tr>
                 ))}
               </tbody>
