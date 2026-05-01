@@ -13,7 +13,7 @@ El frontend tiene **12 vistas** implementadas como prototipos estáticos con dat
 |-------|---------|--------|
 | Inicio del Día | `InicioDia.tsx` | ✅ Prototipo mock |
 | Estado de Planillas | `EstadoPlanillas.tsx` | ✅ Prototipo mock |
-| Cuadre de Planillas | `CuadrePlanillas.tsx` | ✅ Prototipo mock (7 secciones, v7.2 §2.5 ✓) |
+| Cuadre de Planillas | `CuadrePlanillas.tsx` | ✅ Prototipo mock (7 secciones, §2.5 v7.2 ✓) |
 | Recaudo Diario | `RecaudoDiario.tsx` | ✅ Prototipo mock |
 | Revisión Analista | `Revision.tsx` | ✅ Prototipo mock |
 | Sincronización Odoo | `SincronizacionOdoo.tsx` | ✅ Prototipo mock (5 bloques) |
@@ -24,14 +24,12 @@ El frontend tiene **12 vistas** implementadas como prototipos estáticos con dat
 | Sidebar | `AppSidebar.tsx` | ✅ Sin filtro por rol |
 | Store | `appStore.ts` | ✅ Sin usuario/rol/sede real |
 
-> [!IMPORTANT]
-> **Todo el trabajo pendiente es de backend e integración.** El prototipo de UI cubre bien todas las vistas. La prioridad ahora es conectar Supabase, implementar autenticación real con roles, habilitar la ingesta de datos y reemplazar los mocks progresivamente.
+> **Nota:** Todo el trabajo pendiente es de backend e integración. El prototipo de UI cubre bien todas las vistas. La prioridad ahora es conectar Supabase, implementar autenticación real con roles, habilitar la ingesta de datos y reemplazar los mocks progresivamente.
 
 ---
 
 ## Fase 1 — Base de datos Supabase (Prioridad: CRÍTICA)
 
-> [!NOTE]
 > El SQL completo v7.2 ya está en `Docs/SQL_v7.2_Tesoreria_Riogrande.sql`. Son 41 tablas, 7 funciones, triggers y datos iniciales. Solo hay que ejecutarlo en Supabase.
 
 ### 1.1 Ejecutar esquema SQL v7.2
@@ -104,7 +102,7 @@ interface AppState {
 
 ### 2.3 Filtrar sidebar por rol
 
-Implementar en `AppSidebar.tsx` el filtro de menú según `USUARIOS_v1.md §7`:
+Implementar en `AppSidebar.tsx` el filtro de menú según USUARIOS_v1.md §7:
 ```typescript
 const menuItems = allMenuItems.filter(item => {
   if (item.id === 'revision')            return ['analista','director','admin'].includes(rol);
@@ -121,14 +119,13 @@ Crear `src/components/ProtectedRoute.tsx` que verifique sesión activa y rol req
 
 ### 2.5 Gestión de usuarios en Parametrización
 
-En `Parametrizacion.tsx`, pestaña "Empleados/Usuarios": UI para que el Admin cree usuarios (llama a Supabase Admin API), asigne rol y sede, y cargue el INSERT en `perfiles`.
+En `Parametrizacion.tsx`, pestaña "Empleados/Usuarios": UI para que el Admin cree usuarios (llama a Supabase Admin API), asigne rol y sede, y realice el INSERT en `perfiles`.
 
 ---
 
 ## Fase 3 — Ingesta de Datos desde SharePoint (Prioridad: ALTA)
 
-> [!WARNING]
-> Esta fase depende de que los archivos Excel de SharePoint tengan el formato exacto especificado en el PROYECTO v7.2 §4. Validar con contabilidad antes de programar los parsers.
+> **Advertencia:** Esta fase depende de que los archivos Excel de SharePoint tengan el formato exacto especificado en el PROYECTO v7.2 §4. Validar con contabilidad antes de programar los parsers.
 
 ### 3.1 Servicio de ingesta (Edge Function Supabase o función local)
 
@@ -139,7 +136,7 @@ Crear parsers para cada tipo de archivo:
 | ERP (DA_2026_04.xlsx) | `documentos_erp` + `clientes` | `operacion_documento` / `operacion_codigo_cliente` |
 | ANTICIPOS_DA_2026_04.xlsx | `documentos_erp` (tipo ANTICIPO / CRUCE ANTICIPO) | `operacion_documento` |
 | Extracto banco | `consignaciones_banco` | `banco_id` + `referencia` |
-| Aliados (Cárnicos/Nutresa/Meals) | `consignaciones_aliados` | por definir |
+| Aliados (Cárnicos/Nutresa/Meals) | `consignaciones_aliados` | por definir con contabilidad |
 | Alpina (conciliación manual) | `consignaciones_aliados` | columna Caja identifica sede |
 | DIAN | `documentos_dian` → trigger → `documentos_erp.estado_dian` | `documento_electronico` |
 
@@ -150,7 +147,7 @@ Crear parsers para cada tipo de archivo:
 
 ### 3.3 Habilitadores en UI (Parametrización)
 
-El botón "Sincronizar SharePoint" en `SincronizacionOdoo.tsx` debe respetar:
+El botón "Sincronizar SharePoint" debe respetar:
 - `INGESTA_MANUAL_ACTIVA` — habilita botón manual
 - `INGESTA_AUTOMATICA_ACTIVA` — activa cron a `HORA_SYNC_AUTOMATICA`
 
@@ -167,7 +164,7 @@ Reemplazar todos los mocks de `CuadrePlanillas.tsx` con queries reales a Supabas
 
 ### 4.2 Sección 2.1 — Liquidación planillas
 
-Query: `documentos_erp WHERE operacion_planilla IN :planillas AND tipo_documento IN ('FACTURA DE VENTA','NOTA CREDITO','NOTA DEBITO','ANTICIPO','CRUCE ANTICIPO')` ordenado por tipo
+Query: `documentos_erp WHERE operacion_planilla IN :planillas AND tipo_documento IN ('FACTURA DE VENTA','NOTA CREDITO','NOTA DEBITO','ANTICIPO','CRUCE ANTICIPO')` ordenado por tipo.
 
 ### 4.3 Sección 2.2 — Gastos de ruta
 
@@ -179,19 +176,19 @@ Query: `documentos_erp WHERE operacion_planilla IN :planillas AND tipo_documento
 ### 4.4 Sección 2.3 — Consignaciones Riogrande
 
 - Dropdown "Cuenta destino": `parametros_contables WHERE tipo_asiento = 'consignaciones a riogrande' AND sede_id = :sede`
-- Lista de disponibles: `consignaciones_banco WHERE estado_cuadre = 'LIBRE' AND sede_id = :sede` con margen de fechas
-- Al seleccionar: UPDATE `consignaciones_banco SET estado_cuadre = 'BLOQUEADA', bloqueada_por = auth.uid(), bloqueada_at = now()` + desnormalizar `diario_caja`, `diario_destino`
+- Lista de disponibles: `consignaciones_banco WHERE estado_cuadre = 'LIBRE' AND sede_id = :sede`
+- Al seleccionar: UPDATE `estado_cuadre = 'BLOQUEADA'` + desnormalizar `diario_caja`, `diario_destino`
 
 ### 4.5 Sección 2.4 — Anticipos Aliados
 
-- Cárnicos/Nutresa/Meals: `consignaciones_aliados WHERE estado_certificacion = 'CERTIFICADA' AND aliado = :aliado AND estado_cuadre = 'LIBRE'`
+- Cárnicos/Nutresa/Meals: `consignaciones_aliados WHERE estado_certificacion = 'CERTIFICADA' AND estado_cuadre = 'LIBRE'`
 - Alpina: INSERT libre en `consignaciones_aliados` con `estado_certificacion = 'SIN_CERTIFICAR'`, desnormalizar desde `aliados`
 
-### 4.6 Sección 2.5 — Anticipos de clientes ✅ UI lista
+### 4.6 Sección 2.5 — Anticipos de clientes ✅ UI lista (v7.2)
 
 Query: `documentos_erp WHERE tipo_documento IN ('ANTICIPO','CRUCE ANTICIPO') AND operacion_planilla IN :planillas`  
-— Los dos grupos y la fórmula `total = suma(ANTICIPO) - suma(CRUCE ANTICIPO)` ya están implementados en UI.  
-**Pendiente:** reemplazar `mockAnticiposClientes` con query real.
+Los dos grupos y la fórmula `total = suma(ANTICIPO) - suma(CRUCE ANTICIPO)` ya están implementados en UI.  
+**Pendiente:** reemplazar `mockAnticiposClientes` con query real a Supabase.
 
 ### 4.7 Sección 2.6 — Anticipos nómina
 
@@ -203,7 +200,7 @@ Query: `documentos_erp WHERE tipo_documento IN ('ANTICIPO','CRUCE ANTICIPO') AND
 ### 4.8 Sección 2.7 — Confirmar cuadre
 
 Al confirmar:
-1. `generar_consecutivo_cuadre(sede_id, fecha)` → genera DMA-110426.01
+1. Llamar `generar_consecutivo_cuadre(sede_id, fecha)` → genera DMA-110426.01
 2. UPDATE `cuadres SET consecutivo, total_*, efectivo_real, efectivo_teorico, estado = 'ENVIADO_REVISION'`
 3. UPDATE `documentos_erp SET estado_at = 'EN_CUADRE', numero_cuadre = :consecutivo`
 4. UPDATE `consignaciones_banco SET estado_cuadre = 'EN_CUADRE'`
@@ -222,13 +219,12 @@ Query `cuadres WHERE recaudo_id = :recaudo_id` → sumar totales. Cards con sald
 Flujo cascada según tipo:
 - Consignación RG → INSERT `consignaciones_banco` con `origen = 'DESTINO_EFECTIVO'`
 - Anticipo aliado → INSERT `consignaciones_aliados` con `origen = 'DESTINO_EFECTIVO'`
-- Gasto → INSERT `gastos` con `origen = 'DESTINO_EFECTIVO'` (mismo form que §2.2)
+- Gasto → INSERT `gastos` con `origen = 'DESTINO_EFECTIVO'`
 - Anticipo nómina → INSERT `cuadre_anticipos_nomina` con `origen = 'DESTINO_EFECTIVO'`
 - Traslado caja → INSERT `traslados_caja` con campos desnormalizados
 
 ### 5.3 Sección 3.4 — Soportes del día
 
-- Determinar qué tipos aplican según lo registrado (gastos? retenciones? etc.)
 - Upload a ruta local parametrizada en `parametros_sistema.RUTA_SOPORTES_*`
 - Nomenclatura estándar: `DMA_20260419_RETENCIONES_DMA-RD-190426.pdf`
 - INSERT `soportes_dia`
@@ -242,38 +238,28 @@ UPDATE `recaudos_dia SET estado = 'CERRADO_AUXILIAR', cerrado_at = now()`
 - Cargar `checklist_revision` (11 ítems) calculando `aplica` automáticamente
 - Al aprobar todos: ejecutar `promover_a_historico(recaudo_id)` vía RPC Supabase
 - Al devolver: UPDATE estado = 'DEVUELTO' con nota obligatoria
-- Bloqueo director: anular cuadres aprobados con motivo, UPDATE `cuadres SET estado = 'ANULADO', motivo_anulacion, anulado_por`
+- Bloqueo director: anular cuadres aprobados con motivo
 
 ---
 
-## Fase 6 — Sincronización Odoo (Prioridad: MEDIA)
+## Fase 6 — Sincronización Odoo (Prioridad: MEDIA — BLOQUEADA)
 
-> [!IMPORTANT]
-> Esta fase requiere coordinar con el implementador de Odoo los 7 puntos pendientes listados en PROYECTO_v7.2.md §11 (endpoints, External IDs, diarios, confirmación de recepción, etc.)
+> **Importante:** Esta fase requiere coordinar con el implementador de Odoo los 7 puntos pendientes listados en PROYECTO_v7.2.md §11.
 
 ### 6.1 Bloque 1 — Clientes
-
-Query `clientes WHERE sincronizado_odoo = false OR requiere_sync_odoo = true` → llamada API Odoo → UPDATE `sincronizado_odoo = true, sincronizado_at = now()`
+`clientes WHERE sincronizado_odoo = false OR requiere_sync_odoo = true` → API Odoo → UPDATE `sincronizado_odoo = true`
 
 ### 6.2 Bloque 2 — Documentos ERP
-
-Query `hist_documentos_erp WHERE estado_at = 'APROBADO' AND estado_dian = 'APROBADO_CON_NOTIFICACION' AND estado_odoo = 'PENDIENTE'` → API Odoo → UPDATE `estado_odoo = 'CONFIRMADO', referencia_odoo`
+`hist_documentos_erp WHERE estado_at = 'APROBADO' AND estado_dian = 'APROBADO_CON_NOTIFICACION' AND estado_odoo = 'PENDIENTE'` → API Odoo
 
 ### 6.3 Bloque 3 — Proveedores
-
 Similar a Bloque 1.
 
 ### 6.4 Bloque 4 — Empleados sin Odoo
-
-Solo informativo — alerta visual sin acción automática.
+Solo informativo — sin acción automática.
 
 ### 6.5 Bloque 5 — Transacciones
-
 Enviar en orden: `hist_retenciones` → `hist_gastos` (causación + egreso) → `hist_consignaciones_banco` → `hist_consignaciones_aliados` → `hist_anticipos_nomina` → `hist_traslados_caja`
-
-### 6.6 Habilitadores
-
-Respetar `SYNC_ODOO_MANUAL_ACTIVA` y `SYNC_ODOO_AUTOMATICA_ACTIVA` en `parametros_sistema`.
 
 ---
 
@@ -292,11 +278,11 @@ Respetar `SYNC_ODOO_MANUAL_ACTIVA` y `SYNC_ODOO_AUTOMATICA_ACTIVA` en `parametro
 | Estado Documentos ERP | `hist_documentos_erp` |
 | Conciliación ERP vs DIAN | `hist_documentos_erp LEFT JOIN documentos_dian` |
 | Documentos listos para Odoo | `hist_documentos_erp WHERE estado_at='APROBADO' AND estado_dian='APROBADO_CON_NOTIFICACION'` |
-| Transacciones pendientes Odoo | `hist_retenciones UNION hist_gastos UNION ...` WHERE `estado_odoo IN ('PENDIENTE','ERROR')` |
+| Transacciones pendientes Odoo | `hist_* WHERE estado_odoo IN ('PENDIENTE','ERROR')` |
 
 ### 7.2 Conciliación Alpina
 
-- Subir reporte Alpina (Excel con columna Caja) → upsert `consignaciones_aliados`
+- Subir reporte Alpina → upsert `consignaciones_aliados`
 - Cruce automático: valor EXACTO + fecha EXACTA + sede
 - Ambigüedades → revisión manual con radio buttons
 - Al certificar → `estado_certificacion = 'CERTIFICADA'` → habilitado para sync Odoo
@@ -309,7 +295,7 @@ Respetar `SYNC_ODOO_MANUAL_ACTIVA` y `SYNC_ODOO_AUTOMATICA_ACTIVA` en `parametro
 |---|-----------|---------|
 | 1 | Endpoints API Odoo (URL + estructura JSON por tipo) | Fase 6 completa |
 | 2 | `id_externo_odoo` exactos configurados en Odoo | Bloques 5 y parametrización |
-| 3 | Diarios Odoo por tipo de transacción | Parametrización + Bloques 5 |
+| 3 | Diarios Odoo por tipo de transacción | Parametrización + Bloque 5 |
 | 4 | Código exacto del diario de caja por cada sede | Tabla `sedes.diario_caja` |
 | 5 | Cómo confirma Odoo que procesó un registro | UPDATE `estado_odoo = 'CONFIRMADO'` |
 | 6 | Campos adicionales en `hist_empleados` para alerta sync | Bloque 4 |
@@ -320,13 +306,13 @@ Respetar `SYNC_ODOO_MANUAL_ACTIVA` y `SYNC_ODOO_AUTOMATICA_ACTIVA` en `parametro
 ## Resumen de Prioridades
 
 ```
-CRÍTICA  → Fase 1: BD Supabase (ejecutar SQL y cargar datos iniciales)
-ALTA     → Fase 2: Auth + Roles (antes de cualquier otra integración)
-ALTA     → Fase 3: Ingesta SharePoint (alimentar la BD con datos reales)
-ALTA     → Fase 4: Cuadre real (reemplazar mocks, el core del sistema)
+CRÍTICA    → Fase 1: BD Supabase (ejecutar SQL y cargar datos iniciales)
+ALTA       → Fase 2: Auth + Roles (antes de cualquier otra integración)
+ALTA       → Fase 3: Ingesta SharePoint (alimentar la BD con datos reales)
+ALTA       → Fase 4: Cuadre real (reemplazar mocks, el core del sistema)
 MEDIA-ALTA → Fase 5: Recaudo + Revisión + promover_a_historico()
-MEDIA    → Fase 7: Informes reales (concurrente con Fase 5 si hay recursos)
-BLOQUEADA → Fase 6: Sync Odoo (requiere coordinar con implementador Odoo)
+MEDIA      → Fase 7: Informes reales (concurrente con Fase 5 si hay recursos)
+BLOQUEADA  → Fase 6: Sync Odoo (requiere coordinar con implementador Odoo)
 ```
 
 ---
