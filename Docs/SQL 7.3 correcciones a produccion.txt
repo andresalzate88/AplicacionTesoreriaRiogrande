@@ -685,7 +685,8 @@ CREATE INDEX idx_hist_traslados_odoo        ON hist_traslados_caja(estado_odoo);
 CREATE INDEX idx_hist_doc_erp_odoo          ON hist_documentos_erp(estado_odoo);
 CREATE INDEX idx_hist_doc_erp_recaudo       ON hist_documentos_erp(recaudo_id);
 CREATE INDEX idx_hist_doc_erp_fecha_recaudo ON hist_documentos_erp(fecha_recaudo);  -- v7.1
-
+CREATE INDEX idx_hist_doc_erp_sede_fecha    ON hist_documentos_erp(operacion_id, fecha_recaudo, estado_odoo); 
+ -- v7.3
 -- audit_log
 CREATE INDEX idx_audit_tabla                ON audit_log(tabla);
 CREATE INDEX idx_audit_registro             ON audit_log(registro_id);

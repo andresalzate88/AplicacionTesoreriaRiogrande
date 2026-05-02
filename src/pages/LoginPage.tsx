@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
 import { supabase } from '@/lib/supabase';
-import type { Perfil } from '@/store/appStore';
+import { loadPerfil } from '@/lib/auth';
 import { Lock, Mail } from 'lucide-react';
 
 const LoginPage = () => {
@@ -27,36 +27,14 @@ const LoginPage = () => {
       return;
     }
 
-    console.log('[Login] auth OK — user.id:', authData.user.id);
-    console.log('[Login] user.email:', authData.user.email);
+    const perfil = await loadPerfil(authData.user.id);
 
-    const query = supabase
-      .from('perfiles')
-      .select('id, nombre, rol, sede_id, sedes(nombre)')
-      .eq('id', authData.user.id)
-      .single();
-
-    console.log('[Login] ejecutando query a perfiles con id =', authData.user.id);
-
-    const { data: row, error: perfilError } = await query;
-
-    console.log('[Login] perfiles → data:', row);
-    console.log('[Login] perfiles → error:', perfilError);
-
-    if (perfilError || !row) {
+    if (!perfil) {
       await supabase.auth.signOut();
       setError('Usuario sin perfil asignado. Contacta al administrador.');
       setLoading(false);
       return;
     }
-
-    const perfil: Perfil = {
-      id: row.id,
-      nombre: row.nombre,
-      rol: row.rol,
-      sede_id: row.sede_id,
-      sede_nombre: (row.sedes as { nombre: string } | null)?.nombre ?? row.sede_id,
-    };
 
     login(authData.user, perfil);
   };
