@@ -572,7 +572,7 @@ DECLARE tablas_odoo text[] := ARRAY[
     'hist_retenciones','hist_gastos','hist_anticipos_nomina',
     'hist_traslados_caja','hist_documentos_erp',
     'hist_consignaciones_banco','hist_consignaciones_aliados',
-    'hist_clientes','hist_proveedores','hist_empleados'
+    'hist_empleados'
 ];
 BEGIN
     FOREACH t IN ARRAY tablas_odoo LOOP
@@ -1311,7 +1311,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t text;
 DECLARE tablas_audit text[] := ARRAY[
-    'sedes','aliados','operaciones','bancos','cuentas_analiticas',
+    'sedes','aliados','operaciones','cuentas_analiticas',
     'parametros_contables','parametros_contables_generales','parametros_sistema',
     'empleados','vehiculos',
     'clientes','proveedores',
