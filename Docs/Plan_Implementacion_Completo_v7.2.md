@@ -499,7 +499,7 @@ Lee estos archivos de la carpeta /Docs de este repositorio antes de hacer cualqu
 - PROYECTO_v7.2.md
 - SQL_v7.2_Tesoreria_Riogrande.sql
 - USUARIOS_v1.md
-- Plan_Implementacion_7_2-Antigravity.txt
+- Plan_Implementacion Completo _7_2-.md
 
 Somos una empresa de distribución colombiana (Distribuciones Riogrande)
 implementando una plataforma de tesorería llamada RioTesorería.
@@ -535,3 +535,54 @@ No hagas ningún cambio todavía. Solo confirma que entendiste el contexto.
 
 *Plan de implementación v7.2 — Distribuciones Riogrande · RioTesorería · 2026-04-30*
 *Combinación del plan de Antigravity + recomendaciones de arquitectura Claude Chat*
+
+
+---
+
+## FASE 8 — Paso a Producción (CRÍTICA)
+> **Quién:** Tú directamente en Supabase PROD y Vercel. Claude Chat te guía paso a paso.
+> **Prerequisito obligatorio:** Las Fases 0 a 7 completadas y validadas en DEV.
+> **Objetivo:** Desplegar RioTesorería en el ambiente real con usuarios reales de Donmatías.
+
+---
+
+### 8.0 Checklist de salida de DEV — NO pasar a PROD sin esto
+
+| # | Criterio | Validado |
+|---|----------|----------|
+| 1 | Login y roles funcionando (auxiliar, analista, director, admin) | ☐ |
+| 2 | Ingesta de archivos Excel desde SharePoint sin errores | ☐ |
+| 3 | Cuadre de planillas completo (7 secciones) funcionando en DMA | ☐ |
+| 4 | Recaudo diario cerrado y aprobado al menos 1 vez real en DEV | ☐ |
+| 5 | Revisión analista y aprobación funcionando | ☐ |
+| 6 | `promover_a_historico()` ejecutado sin errores | ☐ |
+| 7 | Informes mostrando datos reales | ☐ |
+| 8 | Conciliación Alpina funcionando | ☐ |
+| 9 | Al menos 2 semanas de piloto real en DMA en DEV sin errores críticos | ☐ |
+| 10 | Todos los usuarios reales capacitados | ☐ |
+
+---
+
+### 8.1 Entender qué se pasa de DEV a PROD
+
+Antes de ejecutar cualquier cosa, es importante entender qué viaja 
+de DEV a PROD y qué no:
+
+**Lo que NO se pasa a PROD:**
+- Los datos de prueba (cuadres ficticios, usuarios de prueba, 
+  consignaciones inventadas)
+- Nada de lo que ingresaste en DEV durante las pruebas
+
+**Lo que SÍ se replica en PROD — automáticamente al ejecutar el SQL v7.3:**
+- La estructura completa de las 41 tablas
+- Los datos maestros reales: sedes, aliados, bancos, operaciones, 
+  parámetros del sistema
+- Los permisos y políticas de seguridad (RLS)
+
+**El frontend (la aplicación React) es el mismo para DEV y PROD.**
+Solo cambia a dónde apunta — eso se controla en Vercel con las 
+variables de entorno. No hay que tocar código.
+
+**Resumen visual:**
+
+

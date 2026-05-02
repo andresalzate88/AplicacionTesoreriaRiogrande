@@ -1445,6 +1445,23 @@ INSERT INTO parametros_contables (tipo_asiento, detalle_asiento, cuenta, diario_
     ('traslado entre cajas','Istmina QBO',    '4200017', NULL, (SELECT id FROM sedes WHERE codigo='QBO'));
 
 -- ============================================================
+-- 13. PERMISOS — rol authenticated (usuarios logueados)
+-- ============================================================
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT INSERT, UPDATE ON perfiles TO authenticated;
+GRANT INSERT, UPDATE ON recaudos_dia TO authenticated;
+GRANT INSERT, UPDATE ON cuadres TO authenticated;
+GRANT INSERT, UPDATE ON cuadre_retenciones TO authenticated;
+GRANT INSERT, UPDATE ON gastos TO authenticated;
+GRANT INSERT, UPDATE ON cuadre_anticipos_nomina TO authenticated;
+GRANT INSERT, UPDATE ON traslados_caja TO authenticated;
+GRANT INSERT, UPDATE ON consignaciones_banco TO authenticated;
+GRANT INSERT, UPDATE ON consignaciones_aliados TO authenticated;
+GRANT INSERT, UPDATE ON soportes_dia TO authenticated;
+GRANT INSERT, UPDATE ON checklist_revision TO authenticated;
+
+-- ============================================================
 -- FIN DEL SCRIPT v7.1
 -- ============================================================
 -- Tablas maestras y parámetros:  11
