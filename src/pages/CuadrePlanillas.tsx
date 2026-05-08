@@ -67,17 +67,11 @@ const placasMock = ['NTB-432', 'OPQ-871', 'KLM-234'];
 const ALIADOS24 = ['Alpina', 'Cárnicos', 'Nutresa', 'Meals'] as const;
 type Aliado24 = typeof ALIADOS24[number];
 
-// Anticipos mock de clientes (en la sección 2.1)
+// Anticipos de clientes en sección 2.1 (documentos_erp WHERE tipo_documento IN ('ANTICIPO','CRUCE ANTICIPO'))
 const anticiposMock21 = [
-  { planilla: 'DA-32926', numero: 'ANT-00045', cliente: 'Tienda La Esquina', valor: 500000 },
-  { planilla: 'DA-32937', numero: 'ANT-00046', cliente: 'Supermercado Norte', valor: -200000 },
-];
-
-// §2.5 — Anticipos de clientes (documentos_erp WHERE tipo_documento === 'ANTICIPO' || tipo_documento === 'CRUCE ANTICIPO')
-const mockAnticiposClientes = [
-  { id: 'ac1', tipo: 'ANTICIPO',       subTipo: 'ANTICIPO',       cliente: 'Tienda El Sol',         nit: '1039760460', factura: '',          valor: 150000, fecha: '19/04/2026' },
-  { id: 'ac2', tipo: 'CRUCE ANTICIPO', subTipo: 'CRUCE ANTICIPO', cliente: 'Tienda El Sol',         nit: '1039760460', factura: 'FV-009821', valor: 150000, fecha: '19/04/2026' },
-  { id: 'ac3', tipo: 'ANTICIPO',       subTipo: 'ANTICIPO',       cliente: 'Supermercado Los Andes', nit: '1017890123', factura: '',          valor: 80000,  fecha: '19/04/2026' },
+  { planilla: 'DA-32926', numero: 'ANT-00045', cliente: 'Tienda La Esquina',    tipo: 'ANTICIPO'       as const, factura: '',          valor: 500000 },
+  { planilla: 'DA-32926', numero: 'ANT-00046', cliente: 'Supermercado Norte',   tipo: 'ANTICIPO'       as const, factura: '',          valor: 80000  },
+  { planilla: 'DA-32937', numero: 'ACR-00012', cliente: 'Tienda La Esquina',    tipo: 'CRUCE ANTICIPO' as const, factura: 'FV-009821', valor: 200000 },
 ];
 
 // ── §2.2 — Tipos y catálogos locales ────────────────────────────────────────
@@ -262,11 +256,8 @@ const CuadrePlanillas = () => {
   const selectedNums = planillasMock.filter(p => selectedPlanillas.includes(p.id)).map(p => p.numero);
 
   const totalContado = facturasMock.filter(f => f.crco === 'CONTADO').reduce((s, f) => s + f.totalCuadrar, 0);
-  const totalAnticipos21 = anticiposMock21.reduce((s, a) => s + a.valor, 0); // neto (puede ser < 0)
-  // §2.5 — total_anticipos_clientes = suma(ANTICIPO) - suma(CRUCE ANTICIPO)
-  const sumaAnticipos25 = mockAnticiposClientes.filter(a => a.tipo === 'ANTICIPO').reduce((s, a) => s + a.valor, 0);
-  const sumaCruces25 = mockAnticiposClientes.filter(a => a.tipo === 'CRUCE ANTICIPO').reduce((s, a) => s + a.valor, 0);
-  const totalAnticiposClientes25 = sumaAnticipos25 - sumaCruces25;
+  const totalAnticiposRecib21 = anticiposMock21.filter(a => a.tipo === 'ANTICIPO').reduce((s, a) => s + a.valor, 0);
+  const totalAnticipoCruz21  = anticiposMock21.filter(a => a.tipo === 'CRUCE ANTICIPO').reduce((s, a) => s + a.valor, 0);
   const totalGastos = gastos22.reduce((s, g) => {
     return s + g.valorBase + (g.valorImpuesto || 0) - (g.valorRetencion || 0);
   }, 0);
@@ -277,10 +268,10 @@ const CuadrePlanillas = () => {
     return cert.reduce((s, c) => s + c.valor, 0);
   })();
   const totalAnticipos = anticipos26.reduce((s, a) => s + a.valor, 0);
-  const efectivoTeorico = totalContado + totalAnticipos21 + totalAnticiposClientes25 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos;
+  const efectivoTeorico = totalContado + totalAnticiposRecib21 - totalAnticipoCruz21 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos;
   const diferencia = efectivoReal - efectivoTeorico;
   const aprovechamientos = diferencia > 0 ? diferencia : 0;
-  const diferenciaFinal = totalContado + totalAnticipos21 + totalAnticiposClientes25 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos - efectivoReal + aprovechamientos;
+  const diferenciaFinal = totalContado + totalAnticiposRecib21 - totalAnticipoCruz21 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos - efectivoReal + aprovechamientos;
 
   return (
     <div className="p-8 animate-fade-in">
@@ -391,7 +382,8 @@ const CuadrePlanillas = () => {
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Valor neto (facturas − notas)</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Desc. cond.</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Retenciones</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Anticipos</th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Anticipos Recib</th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Anticipos Cruz</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total a cuadrar</th>
               </tr>
             </thead>
@@ -427,7 +419,8 @@ const CuadrePlanillas = () => {
                       </div>
                     )}
                   </td>
-                  {/* Anticipos — vacío para facturas normales */}
+                  {/* Anticipos Recib / Cruz — vacío para facturas */}
+                  <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">—</td>
                   <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">—</td>
                   <td className={`px-4 py-2.5 text-right font-mono font-medium ${f.crco === 'CRÉDITO' ? 'text-muted-foreground' : 'text-foreground'}`}>
                     {f.crco === 'CRÉDITO' ? '$0' : formatCurrency(f.totalCuadrar)}
@@ -441,18 +434,23 @@ const CuadrePlanillas = () => {
                   <td className="px-4 py-2.5 font-mono text-xs">{a.planilla}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{a.numero}</td>
                   <td className="px-4 py-2.5">
-                    <span className="badge-neutral text-xs">ANTICIPO</span>
+                    <span className="badge-neutral text-xs">{a.tipo}</span>
                   </td>
                   <td className="px-4 py-2.5 text-right text-muted-foreground">—</td>
                   <td className="px-4 py-2.5 text-right text-muted-foreground">—</td>
                   <td className="px-4 py-2.5 text-right text-muted-foreground">—</td>
                   <td className="px-4 py-2.5 text-right text-muted-foreground">—</td>
-                  {/* Columna Anticipos — coloreada */}
-                  <td className={`px-4 py-2.5 text-right font-mono font-semibold ${a.valor >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {a.valor >= 0 ? formatCurrency(a.valor) : `−${formatCurrency(Math.abs(a.valor))}`}
+                  {/* Anticipos Recib */}
+                  <td className="px-4 py-2.5 text-right font-mono font-semibold text-green-600 dark:text-green-400">
+                    {a.tipo === 'ANTICIPO' ? formatCurrency(a.valor) : '—'}
                   </td>
-                  <td className={`px-4 py-2.5 text-right font-mono font-medium ${a.valor >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {a.valor >= 0 ? formatCurrency(a.valor) : `−${formatCurrency(Math.abs(a.valor))}`}
+                  {/* Anticipos Cruz */}
+                  <td className="px-4 py-2.5 text-right font-mono font-semibold text-red-600 dark:text-red-400">
+                    {a.tipo === 'CRUCE ANTICIPO' ? formatCurrency(a.valor) : '—'}
+                  </td>
+                  {/* Total a cuadrar */}
+                  <td className={`px-4 py-2.5 text-right font-mono font-medium ${a.tipo === 'ANTICIPO' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {a.tipo === 'ANTICIPO' ? formatCurrency(a.valor) : `−${formatCurrency(a.valor)}`}
                   </td>
                 </tr>
               ))}
@@ -464,11 +462,14 @@ const CuadrePlanillas = () => {
                 <td className="px-4 py-3 text-right font-mono font-semibold">{formatCurrency(facturasMock.reduce((s, f) => s + f.valorNeto, 0))}</td>
                 <td className="px-4 py-3 text-right font-mono font-semibold">{formatCurrency(facturasMock.reduce((s, f) => s + f.descCondicionado, 0))}</td>
                 <td className="px-4 py-3 text-right font-mono font-semibold">{formatCurrency(facturasMock.reduce((s, f) => s + f.retenciones, 0))}</td>
-                <td className={`px-4 py-3 text-right font-mono font-semibold ${totalAnticipos21 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {totalAnticipos21 >= 0 ? formatCurrency(totalAnticipos21) : `−${formatCurrency(Math.abs(totalAnticipos21))}`}
+                <td className="px-4 py-3 text-right font-mono font-semibold text-green-600 dark:text-green-400">
+                  {formatCurrency(totalAnticiposRecib21)}
+                </td>
+                <td className="px-4 py-3 text-right font-mono font-semibold text-red-600 dark:text-red-400">
+                  {formatCurrency(totalAnticipoCruz21)}
                 </td>
                 <td className="px-4 py-3 text-right font-mono font-bold text-foreground">
-                  {formatCurrency(totalContado + totalAnticipos21)}
+                  {formatCurrency(totalContado + totalAnticiposRecib21 - totalAnticipoCruz21)}
                 </td>
               </tr>
             </tbody>
@@ -1126,80 +1127,7 @@ const CuadrePlanillas = () => {
         })()}
       </section>
 
-      {/* ── §2.5 Anticipos de clientes ── */}
-      <section className="mb-8">
-        <h3 className="text-lg font-semibold text-foreground mb-4">2.5 — Anticipos de clientes</h3>
-        <div className="bg-card rounded-lg border border-border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/70">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tipo</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cliente</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">NIT</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Factura referencia</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Valor</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Grupo 1: Anticipos recibidos */}
-              <tr className="bg-primary/5">
-                <td colSpan={6} className="px-4 py-2 text-xs font-semibold text-primary uppercase tracking-wide">
-                  Anticipos recibidos
-                </td>
-              </tr>
-              {mockAnticiposClientes.filter(a => a.tipo === 'ANTICIPO').map(a => (
-                <tr key={a.id} className="border-t border-border table-row-alt">
-                  <td className="px-4 py-2.5"><span className="badge-neutral text-xs">ANTICIPO</span></td>
-                  <td className="px-4 py-2.5">{a.cliente}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{a.nit}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">—</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-medium text-green-600 dark:text-green-400">{formatCurrency(a.valor)}</td>
-                  <td className="px-4 py-2.5">{a.fecha}</td>
-                </tr>
-              ))}
-              <tr className="border-t border-primary/20 bg-green-50/40 dark:bg-green-900/10">
-                <td colSpan={4} className="px-4 py-2 text-xs font-semibold text-green-700 dark:text-green-400">Subtotal anticipos recibidos</td>
-                <td className="px-4 py-2 text-right font-mono font-bold text-green-700 dark:text-green-400">{formatCurrency(sumaAnticipos25)}</td>
-                <td />
-              </tr>
-
-              {/* Grupo 2: Cruces de anticipo */}
-              <tr className="bg-primary/5">
-                <td colSpan={6} className="px-4 py-2 text-xs font-semibold text-primary uppercase tracking-wide">
-                  Cruces de anticipo
-                </td>
-              </tr>
-              {mockAnticiposClientes.filter(a => a.tipo === 'CRUCE ANTICIPO').map(a => (
-                <tr key={a.id} className="border-t border-border table-row-alt">
-                  <td className="px-4 py-2.5"><span className="badge-neutral text-xs">CRUCE ANTICIPO</span></td>
-                  <td className="px-4 py-2.5">{a.cliente}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{a.nit}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{a.factura}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-medium text-red-600 dark:text-red-400">{formatCurrency(a.valor)}</td>
-                  <td className="px-4 py-2.5">{a.fecha}</td>
-                </tr>
-              ))}
-              <tr className="border-t border-primary/20 bg-red-50/40 dark:bg-red-900/10">
-                <td colSpan={4} className="px-4 py-2 text-xs font-semibold text-red-700 dark:text-red-400">Subtotal cruces de anticipo</td>
-                <td className="px-4 py-2 text-right font-mono font-bold text-red-700 dark:text-red-400">{formatCurrency(sumaCruces25)}</td>
-                <td />
-              </tr>
-
-              {/* Total neto */}
-              <tr className="border-t-2 border-primary/20 bg-accent">
-                <td colSpan={4} className="px-4 py-3 font-semibold">TOTAL ANTICIPOS CLIENTES (neto)</td>
-                <td className={`px-4 py-3 text-right font-mono font-bold ${totalAnticiposClientes25 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {totalAnticiposClientes25 >= 0 ? formatCurrency(totalAnticiposClientes25) : `−${formatCurrency(Math.abs(totalAnticiposClientes25))}`}
-                </td>
-                <td />
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* ── §2.6-orig Conteo de efectivo (renumerado) ── */}
+      {/* ── §2.5 Conteo de efectivo ── */}
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-foreground mb-4">2.5 — Conteo de efectivo</h3>
         <div className="bg-card rounded-lg border border-border p-6">
@@ -1357,12 +1285,13 @@ const CuadrePlanillas = () => {
               <span className="font-bold">{formatCurrency(totalContado)}</span>
             </div>
 
-            {/* Anticipos clientes §2.5 — calculado como suma(ANTICIPO) - suma(CRUCE ANTICIPO) */}
-            <div className={`flex justify-between ${totalAnticiposClientes25 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              <span>{totalAnticiposClientes25 >= 0 ? '+ Anticipos clientes (neto):' : '− Anticipos clientes (neto):'}</span>
-              <span className="font-semibold">
-                {totalAnticiposClientes25 >= 0 ? formatCurrency(totalAnticiposClientes25) : `−${formatCurrency(Math.abs(totalAnticiposClientes25))}`}
-              </span>
+            <div className="flex justify-between text-green-600 dark:text-green-400">
+              <span>+ Anticipos recibidos:</span>
+              <span className="font-semibold">{formatCurrency(totalAnticiposRecib21)}</span>
+            </div>
+            <div className="flex justify-between text-red-600 dark:text-red-400">
+              <span>− Anticipos en cruce:</span>
+              <span className="font-semibold">{formatCurrency(totalAnticipoCruz21)}</span>
             </div>
 
             <div className="flex justify-between text-muted-foreground">
