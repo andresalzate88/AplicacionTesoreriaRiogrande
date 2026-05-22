@@ -11,6 +11,7 @@ export interface Perfil {
 
 interface AppState {
   isLoggedIn: boolean;
+  isInitializing: boolean;
   user: User | null;
   perfil: Perfil | null;
   rol: string | null;
@@ -21,6 +22,7 @@ interface AppState {
   selectedDate: string;
   login: (user: User, perfil: Perfil) => void;
   logout: () => void;
+  setInitializing: (value: boolean) => void;
   setCurrentPage: (page: string) => void;
   setSelectedPlanillas: (ids: string[]) => void;
   togglePlanilla: (id: string) => void;
@@ -30,6 +32,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set) => ({
   isLoggedIn: false,
+  isInitializing: true,
   user: null,
   perfil: null,
   rol: null,
@@ -53,6 +56,7 @@ export const useAppStore = create<AppState>((set) => ({
     sedeId: null,
     currentPage: 'planillas',
   }),
+  setInitializing: (value) => set({ isInitializing: value }),
   setCurrentPage: (page) => set({ currentPage: page }),
   setSelectedPlanillas: (ids) => set({ selectedPlanillas: ids }),
   togglePlanilla: (id) => set((state) => ({

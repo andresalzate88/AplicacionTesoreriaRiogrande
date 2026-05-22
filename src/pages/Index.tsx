@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAppStore } from '@/store/appStore';
 import { supabase } from '@/lib/supabase';
 import { loadPerfil } from '@/lib/auth';
@@ -6,8 +6,7 @@ import LoginPage from '@/pages/LoginPage';
 import AppLayout from '@/components/AppLayout';
 
 const Index = () => {
-  const { isLoggedIn, login, logout } = useAppStore();
-  const [initializing, setInitializing] = useState(true);
+  const { isLoggedIn, isInitializing, login, logout, setInitializing } = useAppStore();
 
   useEffect(() => {
     // Restore session persisted in localStorage by Supabase (survives F5)
@@ -32,7 +31,7 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (initializing) {
+  if (isInitializing) {
     return (
       <div className="min-h-screen bg-muted flex items-center justify-center">
         <p className="text-sm text-muted-foreground">Cargando...</p>

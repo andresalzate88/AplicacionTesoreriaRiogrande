@@ -17,7 +17,7 @@ const menuItems = [
 // Items not listed here are visible to all roles.
 const ROLE_RESTRICTIONS: Record<string, string[]> = {
   'revision':             ['analista', 'director', 'admin'],
-  'conciliacion-alpina':  ['analista', 'director', 'admin'],
+  'conciliacion-alpina':  [], // desactivado — implementación futura
   'sincronizacion-odoo':  ['admin'],
   'parametrizacion':      ['admin'],
 };
