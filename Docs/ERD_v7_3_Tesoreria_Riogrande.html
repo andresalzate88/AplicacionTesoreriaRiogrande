@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ERD v7.3 — Plataforma Tesorería Riogrande</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #212529; font-size: 15px; }
+  .screen-bar { background: #1F4E79; color: white; padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .screen-bar h1 { font-size: 16px; font-weight: 600; }
+  .screen-bar p { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+  .print-btn { background: white; color: #1F4E79; border: none; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .section-divider { background: #2E75B6; color: white; padding: 16px 32px; margin-top: 32px; }
+  .section-divider h2 { font-size: 18px; font-weight: 700; }
+  .section-divider p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 20px; padding: 24px 32px; }
+  .card { background: white; border-radius: 10px; border: 1px solid #dee2e6; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .card-header { padding: 14px 18px; }
+  .card-header.blue { background: #1F4E79; }
+  .card-header.teal { background: #0d6e6e; }
+  .card-header.green { background: #1a6b3c; }
+  .card-header.orange { background: #b85c00; }
+  .card-header.purple { background: #4a3080; }
+  .card-header.red { background: #8b1a1a; }
+  .card-header.cyan { background: #0a5a6e; }
+  .card-header.dian { background: #5a0a6e; }
+  .card-title { font-size: 16px; font-weight: 700; color: white; font-family: monospace; }
+  .card-subtitle { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: #f1f3f5; padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 700; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6; }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f3f5; vertical-align: top; line-height: 1.4; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #f8f9fa; }
+  .field-name { font-family: monospace; font-size: 13px; font-weight: 600; color: #1F4E79; white-space: nowrap; }
+  .field-type { font-size: 12px; color: #6c757d; white-space: nowrap; }
+  .field-desc { font-size: 12px; color: #495057; }
+  .badge-pk { background: #fff3cd; color: #856404; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+  .badge-fk { background: #cfe2ff; color: #084298; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+  .badge-gen { background: #d1e7dd; color: #0a3622; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+  .badge-new { background: #f8d7da; color: #721c24; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+  .badge-den { background: #e2d9f3; color: #432874; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+  .who-fills { margin: 0 18px 14px; padding: 10px 14px; border-radius: 6px; font-size: 12px; line-height: 1.5; }
+  .who-fills.admin { background: #e7f3ff; border-left: 3px solid #1F4E79; color: #1F4E79; }
+  .who-fills.system { background: #fff8e6; border-left: 3px solid #b85c00; color: #7a3e00; }
+  .who-fills.user { background: #e8f5e9; border-left: 3px solid #1a6b3c; color: #0a3622; }
+  .who-fills.auto { background: #fce4e4; border-left: 3px solid #8b1a1a; color: #5a0f0f; }
+  .who-fills strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .legend-bar { padding: 24px 32px 40px; }
+  .legend-inner { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px 24px; }
+  .legend-inner h3 { font-size: 14px; font-weight: 700; color: #495057; margin-bottom: 14px; }
+  .legend-items { display: flex; flex-wrap: wrap; gap: 20px; font-size: 13px; }
+  @media print {
+    body { background: white; }
+    .screen-bar { display: none; }
+    .section-divider { margin-top: 0; page-break-before: always; }
+    .section-divider:first-of-type { page-break-before: avoid; }
+    .grid { grid-template-columns: repeat(2, 1fr); padding: 16px; gap: 14px; }
+    .card { page-break-inside: avoid; box-shadow: none; }
+    @page { size: A3; margin: 12mm; }
+  }
+</style>
+</head>
+<body>
+<div class="screen-bar">
+  <div>
+    <h1>ERD v7.3 — Plataforma Tesorería · Distribuciones Riogrande</h1>
+    <p>Modelo de datos · 41 tablas · Arquitectura directa a Odoo via API · Referencia para SQL v7.3 en Supabase</p>
+  </div>
+  <button class="print-btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 1 — MAESTROS Y PARÁMETROS -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section-divider">
+  <h2>1. Maestros y parámetros</h2>
+  <p>Tablas de configuración. Las llena el Admin antes de arrancar. Todas las demás tablas dependen de estas.</p>
+</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">sedes</div>
+      <div class="card-subtitle">4 registros — Donmatías, Caucasia, Apartadó, Quibdó</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin — editable desde UI (cuenta_caja y diario_caja pueden cambiar con el contador)</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">codigo</td><td class="field-type">text UNIQUE</td><td class="field-desc">DMA / CAC / APA / QBO</td></tr>
+      <tr><td class="field-name">nombre</td><td class="field-type">text</td><td class="field-desc">Donmatías, Caucasia, Apartadó, Quibdó</td></tr>
+      <tr><td class="field-name">letra</td><td class="field-type">text UNIQUE</td><td class="field-desc">D / C / A / Q</td></tr>
+      <tr><td class="field-name">cuenta_caja</td><td class="field-type">text</td><td class="field-desc">Cuenta PUC de efectivo en caja (130501/02/03/04) — se mantiene por precaución</td></tr>
+      <tr><td class="field-name">diario_caja </td><td class="field-type">text</td><td class="field-desc">Diario de Odoo que identifica la caja de esta sede — requerido para todos los movimientos que salen de caja</td></tr>
+      <tr><td class="field-name">activa</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">Fecha de creación</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">aliados</div>
+      <div class="card-subtitle">5 registros — Alpina, Cárnicos, Familia, Nutresa, Meals</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin — NIT y razón social editables. Antes el aliado era texto libre en operaciones.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">nombre</td><td class="field-type">text UNIQUE</td><td class="field-desc">ALPINA / CARNICOS / FAMILIA / NUTRESA / MEALS</td></tr>
+      <tr><td class="field-name">letra</td><td class="field-type">text UNIQUE</td><td class="field-desc">A / C / F / N / M — movido desde operaciones.letra_aliado</td></tr>
+      <tr><td class="field-name">nit</td><td class="field-type">text</td><td class="field-desc">NIT del aliado — se desnormaliza en consignaciones_aliados</td></tr>
+      <tr><td class="field-name">razon_social</td><td class="field-type">text</td><td class="field-desc">Razón social — se desnormaliza en consignaciones_aliados</td></tr>
+      <tr><td class="field-name">activo</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">operaciones</div>
+      <div class="card-subtitle">10 registros — DA, DC, DF, CA, CC, CN, AA, QC, QN, QM</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin — editable desde UI</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">codigo</td><td class="field-type">text UNIQUE</td><td class="field-desc">DA, DC, DF, CA, CC, CN, AA, QC, QN, QM</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ sedes</td></tr>
+      <tr><td class="field-name">aliado_id <span class="badge-fk">FK</span> </td><td class="field-type">uuid</td><td class="field-desc">→ aliados. Reemplaza campo aliado texto.</td></tr>
+      <tr><td class="field-name">tipo_erp</td><td class="field-type">text</td><td class="field-desc">SIDIS / ECOM</td></tr>
+      <tr><td class="field-name">activa</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">bancos</div>
+      <div class="card-subtitle">Catálogo de bancos — usado en Excel de ingesta y dropdown Alpina</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin — cuando se agrega un banco nuevo. El UI de consignaciones RG usa parametros_contables, no esta tabla.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">integer</td><td class="field-desc">ID numérico — se usa en los Excel de ingesta</td></tr>
+      <tr><td class="field-name">nombre</td><td class="field-type">text UNIQUE</td><td class="field-desc">Bancolombia, Banco de Bogotá, CFA, etc.</td></tr>
+      <tr><td class="field-name">tipo</td><td class="field-type">text</td><td class="field-desc">RIOGRANDE / EXTERNO — EXTERNO se muestra en dropdown Alpina</td></tr>
+      <tr><td class="field-name">activo</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">cuentas_analiticas</div>
+      <div class="card-subtitle">Distribuciones analíticas para Odoo — formato JSON</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin/Contabilidad — registros simples por sede. El sistema calcula las combinadas en partes iguales.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ sedes</td></tr>
+      <tr><td class="field-name">codigo_odoo</td><td class="field-type">text</td><td class="field-desc">JSON para Odoo: {"7":100} / {"7":50,"8":50} / {"7":33,"8":33,"9":34}. La distribución ya incluye los centros de costo implícitamente.</td></tr>
+      <tr><td class="field-name">nombre</td><td class="field-type">text</td><td class="field-desc">Nombre legible para dropdown: "DMA-Alpina 100%"</td></tr>
+      <tr><td class="field-name">activo</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">parametros_contables</div>
+      <div class="card-subtitle">11 tipos fijos — corazón de la parametrización contable</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin + Contabilidad. Los tipos NO se crean ni eliminan desde UI. Solo se agregan detalle_asiento dentro de cada tipo.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span> </td><td class="field-type">uuid</td><td class="field-desc">→ sedes. NULL = todas las sedes. UUID = solo esa sede. UI muestra nombre de sede.</td></tr>
+      <tr><td class="field-name">tipo_asiento</td><td class="field-type">text</td><td class="field-desc">retenciones clientes / retenciones a proveedores / gastos / impuestos en gastos / consignaciones a riogrande / anticipos a aliados / traslado entre cajas / anticipo de nomina / aprovechamientos / anticipo recibido clientes / descuento anticipo clientes</td></tr>
+      <tr><td class="field-name">detalle_asiento</td><td class="field-type">text</td><td class="field-desc">Nombre del concepto para dropdown UI (ej: "Peajes", "Retefuente 2.5%", "Caja menor DMA")</td></tr>
+      <tr><td class="field-name">cuenta</td><td class="field-type">text nullable</td><td class="field-desc">Cuenta PUC — se mantiene por precaución. Obligatoria para: anticipos aliados, anticipo nómina.</td></tr>
+      <tr><td class="field-name">id_externo_odoo </td><td class="field-type">text nullable</td><td class="field-desc">Identificador exacto en Odoo. Obligatorio para: retenciones clientes, retenciones proveedores, gastos, impuestos en gastos.</td></tr>
+      <tr><td class="field-name">diario_odoo </td><td class="field-type">text nullable</td><td class="field-desc">Diario de Odoo destino. Obligatorio para: consignaciones a riogrande, traslado entre cajas.</td></tr>
+      <tr><td class="field-name">banco_id <span class="badge-fk">FK</span> </td><td class="field-type">integer</td><td class="field-desc">→ bancos. Solo consignaciones a riogrande — vincula parámetro con extracto bancario.</td></tr>
+      <tr><td class="field-name">requiere_documento_electronico</td><td class="field-type">boolean nullable</td><td class="field-desc">Solo gastos. True = peajes, combustible. False = robos.</td></tr>
+      <tr><td class="field-name">tope_maximo</td><td class="field-type">numeric nullable</td><td class="field-desc">Solo gastos. Monto máximo por ocurrencia.</td></tr>
+      <tr><td class="field-name">activo</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">parametros_contables_generales </div>
+      <div class="card-subtitle">Cuentas contables transversales al sistema</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin + Contabilidad — cuentas que aplican globalmente, no ligadas a un tipo de asiento específico.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">clave</td><td class="field-type">text UNIQUE</td><td class="field-desc">CUENTA_POR_PAGAR / CUENTA_POR_COBRAR</td></tr>
+      <tr><td class="field-name">valor</td><td class="field-type">text</td><td class="field-desc">Cuenta PUC o código Odoo</td></tr>
+      <tr><td class="field-name">descripcion</td><td class="field-type">text</td><td class="field-desc">Explicación del parámetro</td></tr>
+      <tr><td class="field-name">activo</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+      <tr><td class="field-name">updated_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">parametros_sistema</div>
+      <div class="card-subtitle">Configuración operativa del sistema</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin — ajustable en cualquier momento</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">clave</td><td class="field-type">text UNIQUE</td><td class="field-desc">MARGEN_DIAS_ANTES / MARGEN_DIAS_DESPUES / TIMEOUT_SESION_MINUTOS / HORA_SYNC_AUTOMATICA / MAX_DIAS_SIN_APROBAR / RUTA_SOPORTES_DMA / RUTA_SOPORTES_CAC / RUTA_SOPORTES_APA / RUTA_SOPORTES_QBO / INGESTA_MANUAL_ACTIVA / INGESTA_AUTOMATICA_ACTIVA / SYNC_ODOO_MANUAL_ACTIVA / SYNC_ODOO_AUTOMATICA_ACTIVA / DIAS_ATRAS_REGISTRO_GASTO / DIAS_ADELANTE_REGISTRO_GASTO</td></tr>
+      <tr><td class="field-name">valor</td><td class="field-type">text</td><td class="field-desc">Valor del parámetro</td></tr>
+      <tr><td class="field-name">descripcion</td><td class="field-type">text</td><td class="field-desc">Explicación del parámetro</td></tr>
+      <tr><td class="field-name">updated_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">empleados</div>
+      <div class="card-subtitle">Conductores, auxiliares y personal de tesorería</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin — desactivar en lugar de borrar</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ sedes</td></tr>
+      <tr><td class="field-name">nit</td><td class="field-type">text UNIQUE</td><td class="field-desc">Número de identificación</td></tr>
+      <tr><td class="field-name">nombre_completo</td><td class="field-type">text</td><td class="field-desc">Nombre completo</td></tr>
+      <tr><td class="field-name">cargo</td><td class="field-type">text</td><td class="field-desc">CONDUCTOR / AUXILIAR_RUTA / AUXILIAR_TESORERIA / ANALISTA / OTRO</td></tr>
+      <tr><td class="field-name">sincronizado_odoo</td><td class="field-type">boolean</td><td class="field-desc">Default false. Alerta en Vista 05 si false y tiene anticipos.</td></tr>
+      <tr><td class="field-name">activo</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+      <tr><td class="field-name">updated_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">vehiculos</div>
+      <div class="card-subtitle">Maestro de placas por sede</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin — desactivar en lugar de borrar</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ sedes</td></tr>
+      <tr><td class="field-name">placa</td><td class="field-type">text UNIQUE</td><td class="field-desc">Placa del vehículo</td></tr>
+      <tr><td class="field-name">tipo</td><td class="field-type">text</td><td class="field-desc">CAMION / CAMIONETA / MOTO / OTRO</td></tr>
+      <tr><td class="field-name">activo</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header blue">
+      <div class="card-title">consecutivos_cuadre</div>
+      <div class="card-subtitle">Control de consecutivos por sede — reinicia cada día</div>
+    </div>
+    <div class="who-fills auto"><strong>Quién llena</strong>Sistema — función generar_consecutivo_cuadre(). Un registro por sede.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span></td><td class="field-type">uuid UNIQUE</td><td class="field-desc">→ sedes. Un registro por sede.</td></tr>
+      <tr><td class="field-name">ultimo_numero</td><td class="field-type">integer</td><td class="field-desc">Último consecutivo generado hoy</td></tr>
+      <tr><td class="field-name">fecha</td><td class="field-type">date</td><td class="field-desc">Fecha del último consecutivo. Si cambia → reinicia a 1.</td></tr>
+    </tbody></table>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 2 — TERCEROS -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section-divider">
+  <h2>2. Terceros</h2>
+  <p>Maestros de clientes, proveedores y empleados. Todos tienen control de sincronización con Odoo.</p>
+</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="card-header cyan">
+      <div class="card-title">clientes</div>
+      <div class="card-subtitle">Alimentado desde plano ERP via upsert — sin cambios v7</div>
+    </div>
+    <div class="who-fills system"><strong>Quién llena</strong>Sistema — upsert desde plano ERP. Si hay cambios en datos, marca requiere_sync_odoo = true. Sync automático con Odoo.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">operacion_codigo_cliente</td><td class="field-type">text UNIQUE</td><td class="field-desc">DA-1 — clave única de upsert. ID externo en Odoo.</td></tr>
+      <tr><td class="field-name">operacion_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ operaciones</td></tr>
+      <tr><td class="field-name">numero_identificacion</td><td class="field-type">text</td><td class="field-desc">NIT del cliente</td></tr>
+      <tr><td class="field-name">digito_verificacion</td><td class="field-type">text</td><td class="field-desc">Dígito de verificación</td></tr>
+      <tr><td class="field-name">tipo_tercero</td><td class="field-type">text</td><td class="field-desc">Natural / Jurídico</td></tr>
+      <tr><td class="field-name">tipo_identificacion</td><td class="field-type">text</td><td class="field-desc">cedula, nit, etc.</td></tr>
+      <tr><td class="field-name">nombre_establecimiento</td><td class="field-type">text</td><td class="field-desc">Nombre de la tienda</td></tr>
+      <tr><td class="field-name">nombre_completo</td><td class="field-type">text</td><td class="field-desc">Nombre completo del propietario</td></tr>
+      <tr><td class="field-name">nombre1</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">nombre2</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">apellido1</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">apellido2</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">pais</td><td class="field-type">text</td><td class="field-desc">Colombia</td></tr>
+      <tr><td class="field-name">departamento</td><td class="field-type">text</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">municipio</td><td class="field-type">text</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">zip</td><td class="field-type">text</td><td class="field-desc">Código postal</td></tr>
+      <tr><td class="field-name">direccion</td><td class="field-type">text</td><td class="field-desc">Dirección del establecimiento</td></tr>
+      <tr><td class="field-name">correo</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">telefono</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">sincronizado_odoo</td><td class="field-type">boolean</td><td class="field-desc">Default false. True cuando Odoo confirma.</td></tr>
+      <tr><td class="field-name">sincronizado_at</td><td class="field-type">timestamptz</td><td class="field-desc">Cuándo se sincronizó</td></tr>
+      <tr><td class="field-name">requiere_sync_odoo</td><td class="field-type">boolean</td><td class="field-desc">True cuando hay cambios pendientes</td></tr>
+      <tr><td class="field-name">error_sync</td><td class="field-type">text</td><td class="field-desc">Mensaje de error si Odoo rechazó</td></tr>
+      <tr><td class="field-name">activo</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+      <tr><td class="field-name">updated_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header cyan">
+      <div class="card-title">proveedores</div>
+      <div class="card-subtitle">Pre-cargado por Admin — auxiliar puede agregar nuevos — sin cambios v7</div>
+    </div>
+    <div class="who-fills admin"><strong>Quién llena</strong>Admin pre-carga. Auxiliar puede agregar nuevos desde el cuadre. Quedan pendientes de sync con Odoo.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Identificador único</td></tr>
+      <tr><td class="field-name">nit</td><td class="field-type">text UNIQUE</td><td class="field-desc">NIT del proveedor</td></tr>
+      <tr><td class="field-name">digito_verificacion</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">nombre</td><td class="field-type">text</td><td class="field-desc">Nombre del proveedor</td></tr>
+      <tr><td class="field-name">tipo_identificacion</td><td class="field-type">text</td><td class="field-desc">nit, cedula, etc.</td></tr>
+      <tr><td class="field-name">tipo_tercero</td><td class="field-type">text</td><td class="field-desc">Natural / Jurídico</td></tr>
+      <tr><td class="field-name">sincronizado_odoo</td><td class="field-type">boolean</td><td class="field-desc">Default false</td></tr>
+      <tr><td class="field-name">sincronizado_at</td><td class="field-type">timestamptz</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">requiere_sync_odoo</td><td class="field-type">boolean</td><td class="field-desc">True cuando hay cambios pendientes</td></tr>
+      <tr><td class="field-name">error_sync</td><td class="field-type">text</td><td class="field-desc">Mensaje de error si Odoo rechazó</td></tr>
+      <tr><td class="field-name">creado_por <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users. Nullable si fue pre-cargado.</td></tr>
+      <tr><td class="field-name">activo</td><td class="field-type">boolean</td><td class="field-desc">Default true</td></tr>
+      <tr><td class="field-name">updated_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 3 — INGESTA DE DATOS -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section-divider">
+  <h2>3. Ingesta de datos — SharePoint / API ERP / DIAN</h2>
+  <p>Tablas alimentadas automáticamente desde SharePoint o API. documentos_erp y documentos_dian se cruzan por documento_electronico.</p>
+</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="card-header teal">
+      <div class="card-title">documentos_erp</div>
+      <div class="card-subtitle">Facturas, notas y anticipos — sin cambios v7</div>
+    </div>
+    <div class="who-fills system"><strong>Quién llena</strong>Sistema — upsert desde plano Excel (SIDIS) o API (ECOM). Clave única: operacion_documento.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">operacion_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ operaciones</td></tr>
+      <tr><td class="field-name">cliente_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ clientes</td></tr>
+      <tr><td class="field-name">operacion_planilla</td><td class="field-type">text INDEXED</td><td class="field-desc">DA-32825 — clave de agrupación</td></tr>
+      <tr><td class="field-name">estado_planilla_erp</td><td class="field-type">text</td><td class="field-desc">CERRADA / ABIERTA</td></tr>
+      <tr><td class="field-name">tipo_documento</td><td class="field-type">text</td><td class="field-desc">FACTURA DE VENTA / NOTA CREDITO / NOTA DEBITO / ANTICIPO / CRUCE ANTICIPO — ANTICIPO = dinero recibido del cliente (siempre positivo). CRUCE ANTICIPO = cruce del anticipo contra factura (siempre positivo). Cuenta contable viene del plano ERP.</td></tr>
+      <tr><td class="field-name">sub_tipo</td><td class="field-type">text</td><td class="field-desc">FACTURA DE VENTA / NOTA AVERIA-CAMBIO / NOTA BUEN ESTADO / NOTA DESCUENTO CONDICIONADO / ANTICIPO / CRUCE ANTICIPO</td></tr>
+      <tr><td class="field-name">documento_electronico</td><td class="field-type">text</td><td class="field-desc">Clave de cruce con documentos_dian</td></tr>
+      <tr><td class="field-name">operacion_documento</td><td class="field-type">text UNIQUE</td><td class="field-desc">Clave única de upsert</td></tr>
+      <tr><td class="field-name">factura_referencia</td><td class="field-type">text</td><td class="field-desc">Factura a la que aplica la nota</td></tr>
+      <tr><td class="field-name">cr_co</td><td class="field-type">text</td><td class="field-desc">CONTADO / CREDITO</td></tr>
+      <tr><td class="field-name">fecha_emision</td><td class="field-type">date</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">fecha_vencimiento</td><td class="field-type">date</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">producto</td><td class="field-type">text</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">cantidad</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">valor_sin_iva</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">iva</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">valor_base_iva <span class="badge-gen">GEN</span></td><td class="field-type">numeric</td><td class="field-desc">valor_sin_iva + iva</td></tr>
+      <tr><td class="field-name">cuenta_contable</td><td class="field-type">text</td><td class="field-desc">Del plano ERP</td></tr>
+      <tr><td class="field-name">cuenta_analitica</td><td class="field-type">text</td><td class="field-desc">Del plano ERP — se desnormaliza en cuadre_retenciones</td></tr>
+      <tr><td class="field-name">diario_odoo</td><td class="field-type">text</td><td class="field-desc">Del plano ERP</td></tr>
+      <tr><td class="field-name">estado_dian</td><td class="field-type">text</td><td class="field-desc">SIN_VALIDAR / APROBADO_CON_NOTIFICACION / RECHAZADO / PENDIENTE</td></tr>
+      <tr><td class="field-name">validado_dian_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">estado_at</td><td class="field-type">text</td><td class="field-desc">PENDIENTE / EN_CUADRE / ENVIADO_REVISION / APROBADO</td></tr>
+      <tr><td class="field-name">numero_cuadre <span class="badge-fk">FK</span></td><td class="field-type">text</td><td class="field-desc">→ cuadres.consecutivo</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia</td></tr>
+      <tr><td class="field-name">hash_archivo</td><td class="field-type">text</td><td class="field-desc">Antifraude</td></tr>
+      <tr><td class="field-name">leido_sharepoint_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">updated_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header dian">
+      <div class="card-title">documentos_dian</div>
+      <div class="card-subtitle">Informe DIAN — sin cambios v7</div>
+    </div>
+    <div class="who-fills system"><strong>Quién llena</strong>Sistema — upsert desde informe Excel DIAN. Al insertar, trigger actualiza documentos_erp.estado_dian.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">operacion_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ operaciones</td></tr>
+      <tr><td class="field-name">prefijo</td><td class="field-type">text</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">folio</td><td class="field-type">text</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">documento_electronico</td><td class="field-type">text UNIQUE</td><td class="field-desc">prefijo + folio — clave de cruce</td></tr>
+      <tr><td class="field-name">fecha_emision</td><td class="field-type">date</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">base</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">iva</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">total</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">tipo_documento</td><td class="field-type">text</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">estado_dian</td><td class="field-type">text</td><td class="field-desc">APROBADO_CON_NOTIFICACION / RECHAZADO / PENDIENTE</td></tr>
+      <tr><td class="field-name">leido_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">updated_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header teal">
+      <div class="card-title">consignaciones_banco</div>
+      <div class="card-subtitle">Extracto bancario Riogrande — 3 campos nuevos v7</div>
+    </div>
+    <div class="who-fills system"><strong>Quién llena</strong>Sistema — lectura del extracto bancario estandarizado en SharePoint. banco_id lo pone contabilidad en el Excel. UI sección 2.3 usa parametros_contables, no bancos.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ sedes</td></tr>
+      <tr><td class="field-name">operacion_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ operaciones. Nullable.</td></tr>
+      <tr><td class="field-name">banco_id <span class="badge-fk">FK</span></td><td class="field-type">integer</td><td class="field-desc">→ bancos. Para ingesta y trazabilidad.</td></tr>
+      <tr><td class="field-name">parametro_id <span class="badge-fk">FK</span> </td><td class="field-type">uuid</td><td class="field-desc">→ parametros_contables tipo consignaciones a riogrande. Se asigna al seleccionar en UI.</td></tr>
+      <tr><td class="field-name">diario_caja <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde sedes.diario_caja — diario origen para Odoo</td></tr>
+      <tr><td class="field-name">diario_destino <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.diario_odoo — diario destino para Odoo</td></tr>
+      <tr><td class="field-name">cuenta_bancaria</td><td class="field-type">text</td><td class="field-desc">Código de la cuenta bancaria</td></tr>
+      <tr><td class="field-name">fecha</td><td class="field-type">date</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">valor</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">referencia</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">nit_consignante</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">nombre_consignante</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">origen</td><td class="field-type">text</td><td class="field-desc">PLANILLA / DESTINO_EFECTIVO</td></tr>
+      <tr><td class="field-name">estado_cuadre</td><td class="field-type">text</td><td class="field-desc">LIBRE / BLOQUEADA / EN_CUADRE / ENVIADO_REVISION / APROBADO</td></tr>
+      <tr><td class="field-name">cuadre_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ cuadres. Nullable.</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia. Nullable.</td></tr>
+      <tr><td class="field-name">bloqueada_por <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users</td></tr>
+      <tr><td class="field-name">bloqueada_at</td><td class="field-type">timestamptz</td><td class="field-desc">Expira según TIMEOUT_SESION_MINUTOS</td></tr>
+      <tr><td class="field-name">hash_archivo</td><td class="field-type">text</td><td class="field-desc">Antifraude</td></tr>
+      <tr><td class="field-name">leido_sharepoint_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">updated_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header teal">
+      <div class="card-title">consignaciones_aliados</div>
+      <div class="card-subtitle">Certificadas por aliado + registro manual Alpina — Alpina pasa al histórico sin certificación previa</div>
+    </div>
+    <div class="who-fills system"><strong>Quién llena</strong>Sistema (Cárnicos/Nutresa/Meals desde SharePoint) — Auxiliar manual (Alpina con comprobante físico). Alpina pasa al histórico sin requerir conciliación posterior.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ sedes</td></tr>
+      <tr><td class="field-name">operacion_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ operaciones</td></tr>
+      <tr><td class="field-name">aliado</td><td class="field-type">text</td><td class="field-desc">ALPINA / CARNICOS / NUTRESA / MEALS — texto para compatibilidad</td></tr>
+      <tr><td class="field-name">parametro_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ parametros_contables tipo anticipos a aliados</td></tr>
+      <tr><td class="field-name">banco_id <span class="badge-fk">FK</span></td><td class="field-type">integer</td><td class="field-desc">→ bancos tipo EXTERNO. Auxiliar selecciona. Solo trazabilidad.</td></tr>
+      <tr><td class="field-name">diario_caja <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde sedes.diario_caja — diario origen para Odoo</td></tr>
+      <tr><td class="field-name">cuenta_anticipo <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.cuenta — cuenta del anticipo al aliado</td></tr>
+      <tr><td class="field-name">nit_aliado <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde aliados.nit via operacion_id</td></tr>
+      <tr><td class="field-name">nombre_aliado <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde aliados.razon_social via operacion_id</td></tr>
+      <tr><td class="field-name">numero_documento</td><td class="field-type">text</td><td class="field-desc">ID de la consignación del aliado</td></tr>
+      <tr><td class="field-name">referencia</td><td class="field-type">text</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">fecha</td><td class="field-type">date</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">valor</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">moneda</td><td class="field-type">text</td><td class="field-desc">COP por defecto</td></tr>
+      <tr><td class="field-name">origen</td><td class="field-type">text</td><td class="field-desc">PLANILLA / DESTINO_EFECTIVO</td></tr>
+      <tr><td class="field-name">estado_certificacion</td><td class="field-type">text</td><td class="field-desc">CERTIFICADA / SIN_CERTIFICAR / DIFERENCIA — Alpina siempre inicia en SIN_CERTIFICAR pero pasa al histórico sin bloqueo</td></tr>
+      <tr><td class="field-name">certificada_at</td><td class="field-type">timestamptz</td><td class="field-desc">Nullable</td></tr>
+      <tr><td class="field-name">estado_cuadre</td><td class="field-type">text</td><td class="field-desc">LIBRE / BLOQUEADA / EN_CUADRE / ENVIADO_REVISION / APROBADO</td></tr>
+      <tr><td class="field-name">cuadre_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ cuadres. Nullable.</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia. Nullable.</td></tr>
+      <tr><td class="field-name">bloqueada_por <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users. Nullable.</td></tr>
+      <tr><td class="field-name">bloqueada_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">registrada_por <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users. Solo Alpina manual.</td></tr>
+      <tr><td class="field-name">hash_archivo</td><td class="field-type">text</td><td class="field-desc">Null si registro manual Alpina</td></tr>
+      <tr><td class="field-name">leido_sharepoint_at</td><td class="field-type">timestamptz</td><td class="field-desc">Null si registro manual Alpina</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">updated_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 4 — OPERATIVAS: CUADRE -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section-divider">
+  <h2>4. Tablas operativas — Cuadre de planillas</h2>
+  <p>Se llenan cuando la auxiliar hace el cuadre en Vista 02. Todas incluyen campos desnormalizados para envío directo a Odoo.</p>
+</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="card-header green">
+      <div class="card-title">cuadres</div>
+      <div class="card-subtitle">Sin cambios v7</div>
+    </div>
+    <div class="who-fills user"><strong>Quién llena</strong>Auxiliar o Analista (cubriendo) — Vista 02.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">consecutivo</td><td class="field-type">text UNIQUE</td><td class="field-desc">DMA-110426.01</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ sedes</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia</td></tr>
+      <tr><td class="field-name">fecha_cuadre</td><td class="field-type">date</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">planillas</td><td class="field-type">text[]</td><td class="field-desc">['DA-32641', 'DC-32926']</td></tr>
+      <tr><td class="field-name">operaciones</td><td class="field-type">text[]</td><td class="field-desc">['DA', 'DC']</td></tr>
+      <tr><td class="field-name">estado</td><td class="field-type">text</td><td class="field-desc">BORRADOR / ENVIADO_REVISION / APROBADO / ANULADO</td></tr>
+      <tr><td class="field-name">conductor_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ empleados</td></tr>
+      <tr><td class="field-name">auxiliar_1_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ empleados. Nullable.</td></tr>
+      <tr><td class="field-name">auxiliar_2_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ empleados. Nullable.</td></tr>
+      <tr><td class="field-name">vehiculo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ vehiculos</td></tr>
+      <tr><td class="field-name">total_cuadrar_contado</td><td class="field-type">numeric</td><td class="field-desc">Suma facturas contado netas</td></tr>
+      <tr><td class="field-name">total_anticipos_clientes</td><td class="field-type">numeric</td><td class="field-desc">Puede ser negativo</td></tr>
+      <tr><td class="field-name">total_gastos</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">total_consig_riogrande</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">total_consig_aliados</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">total_anticipos_nomina</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">efectivo_real</td><td class="field-type">numeric</td><td class="field-desc">Conteo físico</td></tr>
+      <tr><td class="field-name">efectivo_teorico</td><td class="field-type">numeric</td><td class="field-desc">Calculado por sistema</td></tr>
+      <tr><td class="field-name">diferencia_efectivo <span class="badge-gen">GEN</span></td><td class="field-type">numeric</td><td class="field-desc">real - teórico. Positivo = aprovechamientos.</td></tr>
+      <tr><td class="field-name">ejecutado_por <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users</td></tr>
+      <tr><td class="field-name">confirmado_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">motivo_anulacion</td><td class="field-type">text</td><td class="field-desc">Obligatorio si ANULADO</td></tr>
+      <tr><td class="field-name">anulado_por <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users. Nullable.</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header green">
+      <div class="card-title">cuadre_retenciones</div>
+      <div class="card-subtitle">10 campos nuevos v7 — entregable directo a Odoo</div>
+    </div>
+    <div class="who-fills user"><strong>Quién llena</strong>Auxiliar — sección 2.1. Solo facturas CONTADO. Al seleccionar parámetro, sistema desnormaliza todos los campos Odoo.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">cuadre_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ cuadres</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia</td></tr>
+      <tr><td class="field-name">documento_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ documentos_erp</td></tr>
+      <tr><td class="field-name">cliente_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ clientes</td></tr>
+      <tr><td class="field-name">parametro_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ parametros_contables tipo retenciones clientes</td></tr>
+      <tr><td class="field-name">fecha <span class="badge-den">DEN</span> </td><td class="field-type">date</td><td class="field-desc">Desnormalizado desde documentos_erp.fecha_emision</td></tr>
+      <tr><td class="field-name">numero_factura <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde documentos_erp.factura_referencia</td></tr>
+      <tr><td class="field-name">operacion_codigo_cliente <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde clientes.operacion_codigo_cliente</td></tr>
+      <tr><td class="field-name">nit_cliente <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde clientes.numero_identificacion</td></tr>
+      <tr><td class="field-name">nombre_cliente <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde clientes.nombre_establecimiento</td></tr>
+      <tr><td class="field-name">detalle_retencion <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.detalle_asiento</td></tr>
+      <tr><td class="field-name">cuenta_retencion <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.cuenta</td></tr>
+      <tr><td class="field-name">codigo_externo_odoo <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.id_externo_odoo — Odoo resuelve el asiento internamente</td></tr>
+      <tr><td class="field-name">codigo_analitica_odoo <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde documentos_erp.cuenta_analitica</td></tr>
+      <tr><td class="field-name">cuenta_caja_sede <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde sedes.cuenta_caja</td></tr>
+      <tr><td class="field-name">base_retencion</td><td class="field-type">numeric</td><td class="field-desc">Valor base sobre el cual se calcula la retención</td></tr>
+      <tr><td class="field-name">porcentaje</td><td class="field-type">numeric</td><td class="field-desc">Porcentaje aplicado (ej: 2.5)</td></tr>
+      <tr><td class="field-name">valor</td><td class="field-type">numeric</td><td class="field-desc">Valor retenido = base * porcentaje / 100</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header green">
+      <div class="card-title">gastos</div>
+      <div class="card-subtitle">Rediseñado v7 — 3 renombres + 11 campos nuevos</div>
+    </div>
+    <div class="who-fills user"><strong>Quién llena</strong>Auxiliar — sección 2.2 (PLANILLA) o 3.2 (DESTINO_EFECTIVO). Al confirmar, sistema desnormaliza todos los campos Odoo.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">cuadre_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ cuadres</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia</td></tr>
+      <tr><td class="field-name">origen</td><td class="field-type">text</td><td class="field-desc">PLANILLA / DESTINO_EFECTIVO</td></tr>
+      <tr><td class="field-name">fecha </td><td class="field-type">date</td><td class="field-desc">Ingresado por auxiliar. Restringido por DIAS_ATRAS/ADELANTE_REGISTRO_GASTO.</td></tr>
+      <tr><td class="field-name">parametro_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ parametros_contables tipo gastos</td></tr>
+      <tr><td class="field-name">parametro_impuesto_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ parametros_contables tipo impuestos en gastos. Nullable. (antes: parametro_iva_id)</td></tr>
+      <tr><td class="field-name">parametro_retencion_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ parametros_contables tipo retenciones a proveedores. Nullable.</td></tr>
+      <tr><td class="field-name">proveedor_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ proveedores</td></tr>
+      <tr><td class="field-name">cuenta_analitica_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ cuentas_analiticas</td></tr>
+      <tr><td class="field-name">documento_electronico_proveedor</td><td class="field-type">text</td><td class="field-desc">N° factura del proveedor. Obligatorio según parametro.requiere_documento_electronico.</td></tr>
+      <tr><td class="field-name">valor_base</td><td class="field-type">numeric</td><td class="field-desc">Valor sin impuesto — ingresado por auxiliar</td></tr>
+      <tr><td class="field-name">valor_impuesto </td><td class="field-type">numeric</td><td class="field-desc">Valor del impuesto — ingresado por auxiliar. Nullable. (antes: iva)</td></tr>
+      <tr><td class="field-name">valor_retencion</td><td class="field-type">numeric</td><td class="field-desc">Valor de la retención — ingresado por auxiliar. Nullable.</td></tr>
+      <tr><td class="field-name">valor_total <span class="badge-gen">GEN</span> </td><td class="field-type">numeric</td><td class="field-desc">GENERATED: valor_base + valor_impuesto - valor_retencion</td></tr>
+      <tr><td class="field-name">tipo_impuesto <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.detalle_asiento del impuesto. (antes: tarifa_iva)</td></tr>
+      <tr><td class="field-name">nit_proveedor <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde proveedores.nit</td></tr>
+      <tr><td class="field-name">nombre_proveedor <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde proveedores.nombre</td></tr>
+      <tr><td class="field-name">detalle_gasto <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.detalle_asiento (gasto)</td></tr>
+      <tr><td class="field-name">id_externo_gasto <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.id_externo_odoo (gasto)</td></tr>
+      <tr><td class="field-name">detalle_impuesto <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.detalle_asiento (impuesto). Nullable.</td></tr>
+      <tr><td class="field-name">id_externo_impuesto <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.id_externo_odoo (impuesto). Nullable.</td></tr>
+      <tr><td class="field-name">detalle_retencion <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.detalle_asiento (retención). Nullable.</td></tr>
+      <tr><td class="field-name">id_externo_retencion <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.id_externo_odoo (retención). Nullable.</td></tr>
+      <tr><td class="field-name">codigo_analitica_odoo <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde cuentas_analiticas.codigo_odoo</td></tr>
+      <tr><td class="field-name">diario_caja <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde sedes.diario_caja — para egreso de caja a Odoo</td></tr>
+      <tr><td class="field-name">supera_tope</td><td class="field-type">boolean</td><td class="field-desc">True si valor_base > parametro.tope_maximo</td></tr>
+      <tr><td class="field-name">justificacion_tope</td><td class="field-type">text</td><td class="field-desc">Obligatorio si supera_tope = true</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header green">
+      <div class="card-title">cuadre_anticipos_nomina</div>
+      <div class="card-subtitle">6 campos nuevos v7 — entregable directo a Odoo</div>
+    </div>
+    <div class="who-fills user"><strong>Quién llena</strong>Auxiliar — sección 2.6 (PLANILLA) o 3.2 (DESTINO_EFECTIVO).</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">cuadre_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ cuadres</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia</td></tr>
+      <tr><td class="field-name">empleado_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ empleados</td></tr>
+      <tr><td class="field-name">parametro_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ parametros_contables tipo anticipo de nomina</td></tr>
+      <tr><td class="field-name">cuenta_analitica_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ cuentas_analiticas</td></tr>
+      <tr><td class="field-name">origen</td><td class="field-type">text</td><td class="field-desc">PLANILLA / DESTINO_EFECTIVO</td></tr>
+      <tr><td class="field-name">fecha </td><td class="field-type">date</td><td class="field-desc">Ingresado por auxiliar</td></tr>
+      <tr><td class="field-name">concepto</td><td class="field-type">text</td><td class="field-desc">ANT_NOMINA / PASAJE / HURTO_RUTA</td></tr>
+      <tr><td class="field-name">valor</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">nit_empleado <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde empleados.nit</td></tr>
+      <tr><td class="field-name">nombre_empleado <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde empleados.nombre_completo</td></tr>
+      <tr><td class="field-name">cuenta_anticipo <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.cuenta</td></tr>
+      <tr><td class="field-name">codigo_analitica_odoo <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde cuentas_analiticas.codigo_odoo</td></tr>
+      <tr><td class="field-name">diario_caja <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde sedes.diario_caja</td></tr>
+      <tr><td class="field-name">estado_autorizacion</td><td class="field-type">text</td><td class="field-desc">APROBADO / PENDIENTE (HURTO_RUTA requiere denuncia)</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 5 — OPERATIVAS: RECAUDO Y REVISIÓN -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section-divider">
+  <h2>5. Tablas operativas — Recaudo y revisión</h2>
+  <p>Se llenan en Vista 03 (recaudo) y Vista 04 (revisión analista).</p>
+</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="card-header orange">
+      <div class="card-title">recaudos_dia</div>
+      <div class="card-subtitle">Un recaudo por sede por día — sin cambios v7</div>
+    </div>
+    <div class="who-fills user"><strong>Quién llena</strong>Auxiliar — abre y cierra el día. Analista aprueba o devuelve.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">consecutivo</td><td class="field-type">text UNIQUE</td><td class="field-desc">DMA-RD-110426. Rehecho: -R1, -R2.</td></tr>
+      <tr><td class="field-name">sede_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ sedes. UNIQUE con fecha.</td></tr>
+      <tr><td class="field-name">fecha</td><td class="field-type">date</td><td class="field-desc">UNIQUE con sede_id</td></tr>
+      <tr><td class="field-name">estado</td><td class="field-type">text</td><td class="field-desc">BORRADOR / ABIERTO / CERRADO_AUXILIAR / APROBADO / DEVUELTO</td></tr>
+      <tr><td class="field-name">saldo_anterior</td><td class="field-type">numeric</td><td class="field-desc">Automático del último día aprobado. Solo Admin edita.</td></tr>
+      <tr><td class="field-name">efectivo_planillas</td><td class="field-type">numeric</td><td class="field-desc">Suma efectivo_real de todos los cuadres</td></tr>
+      <tr><td class="field-name">efectivo_dispersado</td><td class="field-type">numeric</td><td class="field-desc">Suma total de destinos</td></tr>
+      <tr><td class="field-name">nuevo_saldo <span class="badge-gen">GEN</span></td><td class="field-type">numeric</td><td class="field-desc">anterior + planillas - dispersado</td></tr>
+      <tr><td class="field-name">sin_movimiento</td><td class="field-type">boolean</td><td class="field-desc">True para domingos sin cuadres</td></tr>
+      <tr><td class="field-name">auxiliar_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users</td></tr>
+      <tr><td class="field-name">cerrado_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">analista_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users</td></tr>
+      <tr><td class="field-name">aprobado_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">nota_devolucion</td><td class="field-type">text</td><td class="field-desc">Obligatorio si DEVUELTO</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header orange">
+      <div class="card-title">traslados_caja</div>
+      <div class="card-subtitle">Renombrada desde destinos_efectivo — 4 campos nuevos v7</div>
+    </div>
+    <div class="who-fills user"><strong>Quién llena</strong>Auxiliar — sección 3.2. SOLO traslados entre cajas (caja menor, TVS, Istmina, Prosegur). Los demás destinos van a sus propias tablas.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia</td></tr>
+      <tr><td class="field-name">parametro_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ parametros_contables tipo traslado entre cajas</td></tr>
+      <tr><td class="field-name">fecha <span class="badge-den">DEN</span> </td><td class="field-type">date</td><td class="field-desc">Desnormalizado desde recaudos_dia.fecha</td></tr>
+      <tr><td class="field-name">detalle <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.detalle_asiento</td></tr>
+      <tr><td class="field-name">diario_caja <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde sedes.diario_caja</td></tr>
+      <tr><td class="field-name">diario_destino <span class="badge-den">DEN</span> </td><td class="field-type">text</td><td class="field-desc">Desnormalizado desde parametros_contables.diario_odoo</td></tr>
+      <tr><td class="field-name">valor</td><td class="field-type">numeric</td><td class="field-desc">—</td></tr>
+      <tr><td class="field-name">descripcion</td><td class="field-type">text</td><td class="field-desc">Nullable — nota libre</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header orange">
+      <div class="card-title">soportes_dia</div>
+      <div class="card-subtitle">Archivos adjuntos del día — sin cambios v7</div>
+    </div>
+    <div class="who-fills user"><strong>Quién llena</strong>Auxiliar — sección 3.4. Sistema detecta qué ítems aplican.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia</td></tr>
+      <tr><td class="field-name">tipo_soporte</td><td class="field-type">text</td><td class="field-desc">LIQUIDACION_PLANILLAS / CREDITOS_FIRMADOS / NOTAS_CONDICIONADAS / RETENCIONES / GASTOS / CONSIG_RIOGRANDE / CONSIG_ALIADOS / ANTICIPOS_NOMINA / TRASLADOS_CAJA / ARQUEO / DENUNCIA</td></tr>
+      <tr><td class="field-name">url</td><td class="field-type">text</td><td class="field-desc">Ruta local estandarizada</td></tr>
+      <tr><td class="field-name">nombre_archivo</td><td class="field-type">text</td><td class="field-desc">DMA_20260419_RETENCIONES_DMA-RD-190426.pdf</td></tr>
+      <tr><td class="field-name">subido_por <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-header orange">
+      <div class="card-title">checklist_revision</div>
+      <div class="card-subtitle">Revisión ítem por ítem — sin cambios v7</div>
+    </div>
+    <div class="who-fills user"><strong>Quién llena</strong>Analista — Vista 04. Al aprobar todos los ítems se ejecuta promover_a_historico().</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">recaudo_id <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ recaudos_dia. UNIQUE con item.</td></tr>
+      <tr><td class="field-name">item</td><td class="field-type">integer</td><td class="field-desc">1 al 11</td></tr>
+      <tr><td class="field-name">descripcion</td><td class="field-type">text</td><td class="field-desc">Nombre del ítem</td></tr>
+      <tr><td class="field-name">aplica</td><td class="field-type">boolean</td><td class="field-desc">Sistema calcula. False si no hay registros de ese tipo en el día.</td></tr>
+      <tr><td class="field-name">estado</td><td class="field-type">text</td><td class="field-desc">PENDIENTE / OK / CON_OBSERVACION / FALTANTE / NO_APLICA</td></tr>
+      <tr><td class="field-name">nota</td><td class="field-type">text</td><td class="field-desc">Obligatorio si no es OK ni NO_APLICA</td></tr>
+      <tr><td class="field-name">revisado_por <span class="badge-fk">FK</span></td><td class="field-type">uuid</td><td class="field-desc">→ auth.users</td></tr>
+      <tr><td class="field-name">revisado_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 6 — HISTÓRICAS -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section-divider">
+  <h2>6. Capa histórica</h2>
+  <p>Copia inmutable al aprobar el día. Solo INSERT vía promover_a_historico(). Fuente directa para Odoo via API — cada histórica tiene todos los campos necesarios para el envío sin transformaciones.</p>
+</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="card-header purple">
+      <div class="card-title">Tablas históricas — resumen</div>
+      <div class="card-subtitle">15 tablas — copia exacta de operativa + campos de control</div>
+    </div>
+    <div class="who-fills auto"><strong>Quién llena</strong>Sistema — función promover_a_historico() al aprobar. Inmutables en contenido operativo. estado_odoo es el único campo mutable post-promoción.</div>
+    <table><thead><tr><th>Tabla histórica</th><th>Origen</th><th>¿Viaja a Odoo?</th><th>Campos adicionales</th></tr></thead>
+    <tbody>
+      <tr><td class="field-name">hist_recaudos_dia</td><td class="field-type">recaudos_dia</td><td class="field-desc">❌</td><td class="field-desc">promovido_at</td></tr>
+      <tr><td class="field-name">hist_cuadres</td><td class="field-type">cuadres</td><td class="field-desc">❌</td><td class="field-desc">promovido_at</td></tr>
+      <tr><td class="field-name">hist_retenciones</td><td class="field-type">cuadre_retenciones</td><td class="field-desc">✅</td><td class="field-desc">promovido_at + estado_odoo + referencia_odoo + error_sync</td></tr>
+      <tr><td class="field-name">hist_gastos</td><td class="field-type">gastos</td><td class="field-desc">✅</td><td class="field-desc">promovido_at + estado_odoo + referencia_odoo + error_sync</td></tr>
+      <tr><td class="field-name">hist_anticipos_nomina</td><td class="field-type">cuadre_anticipos_nomina</td><td class="field-desc">✅</td><td class="field-desc">promovido_at + estado_odoo + referencia_odoo + error_sync</td></tr>
+      <tr><td class="field-name">hist_traslados_caja</td><td class="field-type">traslados_caja</td><td class="field-desc">✅</td><td class="field-desc">promovido_at + estado_odoo + referencia_odoo + error_sync</td></tr>
+      <tr><td class="field-name">hist_soportes_dia</td><td class="field-type">soportes_dia</td><td class="field-desc">❌</td><td class="field-desc">promovido_at</td></tr>
+      <tr><td class="field-name">hist_checklist_revision</td><td class="field-type">checklist_revision</td><td class="field-desc">❌</td><td class="field-desc">promovido_at</td></tr>
+      <tr><td class="field-name">hist_documentos_erp</td><td class="field-type">documentos_erp</td><td class="field-desc">✅</td><td class="field-desc">promovido_at + estado_odoo + referencia_odoo + error_sync + <strong>fecha_recaudo</strong>  — desnormalizado desde recaudos_dia.fecha al promover</td></tr>
+      <tr><td class="field-name">hist_consignaciones_banco</td><td class="field-type">consignaciones_banco</td><td class="field-desc">✅</td><td class="field-desc">promovido_at + estado_odoo + referencia_odoo + error_sync</td></tr>
+      <tr><td class="field-name">hist_consignaciones_aliados</td><td class="field-type">consignaciones_aliados</td><td class="field-desc">✅</td><td class="field-desc">promovido_at + estado_odoo + referencia_odoo + error_sync</td></tr>
+      <tr><td class="field-name">hist_clientes</td><td class="field-type">clientes</td><td class="field-desc">✅</td><td class="field-desc">promovido_at + estado_odoo + referencia_odoo + error_sync</td></tr>
+      <tr><td class="field-name">hist_proveedores</td><td class="field-type">proveedores</td><td class="field-desc">⏳ futura</td><td class="field-desc">promovido_at — sync con Odoo desactivada (implementación futura)</td></tr>
+      <tr><td class="field-name">hist_empleados</td><td class="field-type">empleados</td><td class="field-desc">⏳ futura</td><td class="field-desc">promovido_at — sync con Odoo desactivada (implementación futura)</td></tr>
+      <tr><td class="field-name">hist_documentos_dian</td><td class="field-type">documentos_dian</td><td class="field-desc">❌</td><td class="field-desc">promovido_at</td></tr>
+    </tbody></table>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SECCIÓN 7 — AUDIT LOG -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section-divider">
+  <h2>7. Audit log</h2>
+  <p>Registro inmutable de todas las acciones del sistema. Alimentado por triggers de PostgreSQL.</p>
+</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="card-header red">
+      <div class="card-title">audit_log</div>
+      <div class="card-subtitle">Sin cambios v7 — cubre todas las tablas</div>
+    </div>
+    <div class="who-fills auto"><strong>Quién llena</strong>Triggers de PostgreSQL — automático. Solo INSERT permitido. Inmutable.</div>
+    <table><thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead><tbody>
+      <tr><td class="field-name">id <span class="badge-pk">PK</span></td><td class="field-type">uuid</td><td class="field-desc">Generado</td></tr>
+      <tr><td class="field-name">tabla</td><td class="field-type">text</td><td class="field-desc">Nombre de la tabla afectada</td></tr>
+      <tr><td class="field-name">registro_id</td><td class="field-type">uuid</td><td class="field-desc">ID del registro modificado</td></tr>
+      <tr><td class="field-name">accion</td><td class="field-type">text</td><td class="field-desc">INSERT / UPDATE / DELETE / APPROVE / REJECT / ANULAR</td></tr>
+      <tr><td class="field-name">usuario_id</td><td class="field-type">uuid</td><td class="field-desc">NULLIF(...,'')::uuid — protegido para sesiones sin contexto</td></tr>
+      <tr><td class="field-name">usuario_email</td><td class="field-type">text</td><td class="field-desc">Denormalizado para consulta sin join</td></tr>
+      <tr><td class="field-name">ip_address</td><td class="field-type">text</td><td class="field-desc">IP del cliente</td></tr>
+      <tr><td class="field-name">valor_anterior</td><td class="field-type">jsonb</td><td class="field-desc">Estado completo antes del cambio</td></tr>
+      <tr><td class="field-name">valor_nuevo</td><td class="field-type">jsonb</td><td class="field-desc">Estado completo después del cambio</td></tr>
+      <tr><td class="field-name">created_at</td><td class="field-type">timestamptz</td><td class="field-desc">—</td></tr>
+    </tbody></table>
+  </div>
+
+</div>
+
+<!-- LEYENDA -->
+<div class="legend-bar">
+  <div class="legend-inner">
+    <h3>Leyenda · ERD v7.3 — Total: 41 tablas</h3>
+    <div class="legend-items">
+      <div><span class="badge-pk">PK</span> Clave primaria</div>
+      <div><span class="badge-fk">FK</span> Clave foránea</div>
+      <div><span class="badge-gen">GEN</span> Campo generado por BD</div>
+      <div> Campo nuevo en esta versión</div>
+      <div><span class="badge-den">DEN</span> Campo desnormalizado — se resuelve al momento del registro</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:#1F4E79;border-radius:3px;display:inline-block"></span> Maestros y parámetros</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:#0a5a6e;border-radius:3px;display:inline-block"></span> Terceros</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:#0d6e6e;border-radius:3px;display:inline-block"></span> Ingesta SharePoint / API</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:#5a0a6e;border-radius:3px;display:inline-block"></span> DIAN</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:#1a6b3c;border-radius:3px;display:inline-block"></span> Cuadre (Auxiliar)</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:#b85c00;border-radius:3px;display:inline-block"></span> Recaudo y revisión</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:#4a3080;border-radius:3px;display:inline-block"></span> Históricas (inmutables)</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:#8b1a1a;border-radius:3px;display:inline-block"></span> Audit log</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

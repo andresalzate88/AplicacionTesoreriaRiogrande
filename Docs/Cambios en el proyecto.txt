@@ -1,0 +1,2 @@
+1. Quitar la conciliación con alpina
+2. Los proveedores y empleados no hay que sincronizarlos con Odoo
