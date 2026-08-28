@@ -846,14 +846,14 @@ Dropdown "Cuenta destino" apunta a `parametros_contables WHERE tipo_asiento = 'c
 - Cárnicos/Nutresa/Meals: solo consignaciones que existen en `consignaciones_aliados` con estado CERTIFICADA.
 - Alpina: registro libre con dropdown banco tipo EXTERNO. Queda SIN_CERTIFICAR. Al registrar, el sistema desnormaliza `nit_aliado`, `nombre_aliado`, `cuenta_anticipo` y `diario_caja`. Pasa al histórico sin necesidad de conciliación posterior.
 
-**Sección 2.5 — Anticipos de clientes**
-Muestra documentos de `documentos_erp` con `tipo_documento IN ('ANTICIPO', 'CRUCE ANTICIPO')` del cuadre activo. Se muestran en dos grupos diferenciados visualmente:
+**Anticipos de clientes (dentro de la Sección 2.1)**
+La tabla de facturas de la Sección 2.1 también muestra documentos de `documentos_erp` con `tipo_documento IN ('ANTICIPO', 'CRUCE ANTICIPO')` del cuadre activo, diferenciados visualmente:
 - **ANTICIPO** — dinero recibido del cliente. Valor positivo. Suma al total de la liquidación.
 - **CRUCE ANTICIPO** — cruce del anticipo contra una factura. Valor positivo. Resta del total de la liquidación.
 
 La cuenta contable de cada registro viene directamente del plano ERP en el campo `cuenta_contable` de `documentos_erp` — no requiere selección manual.
 
-**Sección 2.6 — Anticipos nómina**
+**Sección 2.5 — Anticipos de nómina**
 
 | Columna UI | Fuente |
 |------------|--------|
@@ -864,6 +864,9 @@ La cuenta contable de cada registro viene directamente del plano ERP en el campo
 | Valor | Ingreso manual |
 | Estado | APROBADO por defecto. PENDIENTE si HURTO_RUTA. |
 
+**Sección 2.6 — Conteo de efectivo**
+Va después de Anticipos de nómina porque el efectivo teórico depende de ellos. Campos: Efectivo teórico (calculado, se recalcula en vivo al editar cualquier sección anterior, incluida 2.5), Efectivo real (ingresado por la auxiliar), Diferencia (calculada). Si la diferencia es negativa (faltante), el sistema indica revisar los anticipos de nómina registrados en 2.5.
+
 **Sección 2.7 — Resumen del cuadre**
 Ecuación: Contado - Gastos - Consig.RG - Consig.Aliados - Anticipos.Nómina = Efectivo teórico. La auxiliar ingresa el conteo físico (efectivo real). Diferencia = real - teórico. Si positivo → aprovechamiento registrado automáticamente.
 
@@ -871,8 +874,10 @@ Botón "Confirmar cuadre" → genera consecutivo, actualiza estados, asigna reca
 
 ### Vista 03 — Recaudo diario (4 secciones)
 
+Antes de la Sección 3.1 se muestra el **saldo anterior en caja**, para que la tesorera vea de entrada de cuánto dispone.
+
 **Sección 3.1 — Resumen del día**
-Cards con totales de todos los cuadres del día. Saldo anterior, efectivo total, efectivo dispersado, nuevo saldo.
+Cards con totales de todos los cuadres del día. Efectivo total, efectivo dispersado.
 
 **Sección 3.2 — Destinos de efectivo**
 Botón "Agregar Destino". Flujo cascada de dos niveles:
@@ -889,6 +894,8 @@ Sistema crea registro en tabla correspondiente con origen = DESTINO_EFECTIVO
 
 Para tipo "Traslado entre cajas" → solo se muestran opciones parametrizadas para la sede del usuario.
 Para tipo "Gasto" → mismo formulario de la sección 2.2 con valor impuesto y retención manuales.
+
+La tabla de destinos registrados muestra una fila TOTAL con la suma de todos los destinos.
 
 **Sección 3.3 — Saldo de caja**
 `nuevo_saldo = saldo_anterior + efectivo_planillas - efectivo_dispersado`. Solo lectura.
@@ -947,12 +954,23 @@ Cada registro muestra badge: PENDIENTE (gris) / ENVIADO (azul) / CONFIRMADO (ver
 | Saldos de efectivo | recaudos_dia histórico | Analista, Admin |
 | Consignaciones Banco | consignaciones_banco | Analista, Admin |
 | Consignaciones Aliados | consignaciones_aliados | Analista, Admin |
-| Auditoría Máximo Detalle | todas las tablas hist_ | Analista, Director, Admin |
+| Movimiento de Caja (kardex de transacciones) | todas las tablas hist_ — solo recaudos ya aprobados | Analista, Director, Admin |
 | Plano Documentos ERP | hist_documentos_erp + clientes | Admin |
 | Estado Documentos ERP | hist_documentos_erp | Admin |
 | Conciliación ERP vs DIAN | hist_documentos_erp + documentos_dian | Admin |
 | Documentos listos para Odoo | hist_documentos_erp | Admin |
 | Transacciones pendientes Odoo | hist_retenciones, hist_gastos, hist_consignaciones_banco, hist_consignaciones_aliados, hist_anticipos_nomina, hist_traslados_caja | Admin |
+
+### Informe — Movimiento de Caja
+Kardex de transacciones individuales al máximo nivel de detalle — cada factura, nota, retención, gasto, consignación (banco y aliados), anticipo (cliente y nómina) y destino de efectivo, uno por fila, nunca agrupado por planilla. Pensado para comparar contra los asientos contables en Odoo cuando hay diferencias.
+
+**Filtro obligatorio: sede.** El informe nunca mezcla cajas — solo se puede consultar una sede (Donmatías, Caucasia, Apartadó o Quibdó) a la vez.
+
+**Fuente: unión de las tablas `hist_*`.** No requiere una tabla nueva ni un estado "borrador": como estas tablas solo reciben INSERT vía `promover_a_historico()`, un movimiento del día simplemente no existe aquí todavía mientras el recaudo está `CERRADO_AUXILIAR` o en revisión — aparece automáticamente en cuanto la analista aprueba en Vista 04. Antes de esa aprobación, el detalle del cuadre se sigue viendo en la propia Vista 02/03; este informe es exclusivamente el registro ya firme.
+
+**Encabezado:** saldo inicial de la caja al comienzo del rango (`recaudos_dia.saldo_anterior`) y saldo final al cierre del rango (`recaudos_dia.nuevo_saldo`), para que la tesorera vea de cuánto dispone.
+
+**Columnas** (mismo formato para todos los tipos de movimiento): N° Recaudo, Fecha, N° Cuadre (vacío si es un destino de efectivo sin cuadre asociado), Tipo de movimiento, Sub-tipo, Documento, Tercero, NIT, Valor, Cuenta contable, Cuenta analítica, Diario Odoo, Estado Odoo (PENDIENTE/ENVIADO/CONFIRMADO/ERROR), Ejecutado por.
 
 ### Informe — Plano Documentos ERP
 Filtros: Sede, Operación, Rango de fechas, Tipo documento, CR/CO, Estado analista, Estado DIAN. Columnas: todos los campos relevantes + datos del cliente desde `clientes`. Siempre se descarga como Excel por volumen.

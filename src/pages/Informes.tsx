@@ -15,7 +15,7 @@ const tabs = [
   'Cuadres anulados',
   'Consignaciones Banco',
   'Consignaciones Aliados',
-  'Auditoría Máximo Detalle',
+  'Movimiento de Caja',
   'Plano Documentos ERP',
   'Estado Documentos ERP',
   'Conciliación ERP vs DIAN',
@@ -47,19 +47,43 @@ const consigAliadosMock = [
   { fecha: '11/04', aliado: 'Cárnicos', sede: 'Quibdó',    ref: 'CARN-00125', valor: 900000,  certif: 'Diferencia',     estadoCuadre: 'Libre',     cuadre: '—',             recaudo: '—'             },
 ];
 
-const auditoriaMock = [
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', planilla: 'DA-32926', tipo: 'FACTURA_VENTA',       subtipo: 'FACTURA DE VENTA',             doc: 'DMA782282', tercero: 'Tienda El Sol',          nit: '1039760460', valor: 303156,   cuenta: '41351219', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Juan García',    placa: 'NTB-432', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', planilla: 'DA-32926', tipo: 'NOTA_CREDITO',         subtipo: 'NOTA AVERIA-CAMBIO',           doc: 'DMA782283', tercero: 'Tienda El Sol',          nit: '1039760460', valor: -15000,   cuenta: '41752319', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Juan García',    placa: 'NTB-432', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', planilla: 'DA-32926', tipo: 'RETENCION',            subtipo: 'RETEFTE',                      doc: 'DMA782282', tercero: 'Tienda El Sol',          nit: '1039760460', valor: -9095,    cuenta: '23654001', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Juan García',    placa: 'NTB-432', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', planilla: 'DA-32926', tipo: 'GASTO_RUTA',           subtipo: 'PEAJE',                        doc: '—',         tercero: 'Concesión Vial',         nit: '900123456',  valor: 25000,    cuenta: '51309501', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Juan García',    placa: 'NTB-432', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', planilla: 'DA-32926', tipo: 'CONSIGNACION_BANCO',   subtipo: '—',                            doc: 'REF-2847361', tercero: '—',                   nit: '—',          valor: 3000000,  cuenta: '11100501', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Juan García',    placa: 'NTB-432', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', planilla: 'DA-32926', tipo: 'CONSIGNACION_ALIADO',  subtipo: 'ALPINA',                       doc: 'ALP-manual', tercero: 'Alpina S.A.',          nit: '860002552',  valor: 1500000,  cuenta: '23100501', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Juan García',    placa: 'NTB-432', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', planilla: 'DA-32926', tipo: 'ANTICIPO_CLIENTE',     subtipo: 'ANTICIPO',                     doc: 'ANT-00123', tercero: 'Tienda Mixta Nogales',   nit: '1039760461', valor: 500000,   cuenta: '28051001', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Juan García',    placa: 'NTB-432', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', planilla: 'DA-32926', tipo: 'ANTICIPO_NOMINA',      subtipo: 'ANT_NOMINA',                   doc: '—',         tercero: 'Carlos López',           nit: '98480254',   valor: 70000,    cuenta: '25050501', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Juan García',    placa: 'NTB-432', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.02', planilla: 'DC-32641', tipo: 'FACTURA_VENTA',        subtipo: 'FACTURA DE VENTA',             doc: 'DCM773827', tercero: 'Minimercado Popalito',   nit: '98480255',   valor: 150762,   cuenta: '41351205', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Pedro Martínez', placa: 'OPQ-871', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.02', planilla: 'DC-32641', tipo: 'DESC_CONDICIONADO',    subtipo: 'NOTA DESCUENTO CONDICIONADO',  doc: 'DCM773828', tercero: 'Minimercado Popalito',   nit: '98480255',   valor: -5000,    cuenta: '41755002', analitica: '{"7":100}', diario: 'VDA', estCuadre: 'Enviado a revisión', estRecaudo: 'Enviado a revisión', conductor: 'Pedro Martínez', placa: 'OPQ-871', ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: '—',             planilla: '—',        tipo: 'DESTINO_EFECTIVO',     subtipo: 'TRASLADO',                     doc: '—',         tercero: 'Bancolombia Cta1',       nit: '—',          valor: 4000000,  cuenta: '11100502', analitica: '{"7":100}', diario: 'VDA', estCuadre: '—',                  estRecaudo: 'Enviado a revisión', conductor: '—',              placa: '—',       ejecutado: 'María González' },
-  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: '—',             planilla: '—',        tipo: 'DESTINO_EFECTIVO',     subtipo: 'ANTICIPO_ALIADO',              doc: '—',         tercero: 'Alpina S.A.',            nit: '860002552',  valor: 2000000,  cuenta: '23100501', analitica: '{"7":100}', diario: 'VDA', estCuadre: '—',                  estRecaudo: 'Enviado a revisión', conductor: '—',              placa: '—',       ejecutado: 'María González' },
+// Las 4 cajas reales de la operación (ver PROYECTO_v7_3.md §1.1). Este informe
+// nunca mezcla cajas: siempre se filtra por una sola, nunca "todas".
+const CAJAS_MOVIMIENTO = ['Donmatías', 'Caucasia', 'Apartadó', 'Quibdó'];
+
+const saldoInicialPorCaja: Record<string, number> = {
+  'Donmatías': 14500000,
+  'Caucasia': 8200000,
+  'Apartadó': 3100000,
+  'Quibdó': 5400000,
+};
+
+// Signo del efecto en la caja física (kardex). No es el mismo signo que "Valor"
+// (que muestra el monto del asiento contable, para comparar contra Odoo).
+// +1 = entra efectivo a la caja · -1 = sale efectivo de la caja.
+const signoMovimientoCaja = (tipo: string): 1 | -1 => {
+  const entran = ['FACTURA_VENTA', 'ANTICIPO_CLIENTE'];
+  return entran.includes(tipo) ? 1 : -1;
+};
+
+const movimientoCajaMock = [
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', tipo: 'FACTURA_VENTA',      subtipo: 'FACTURA DE VENTA',            doc: 'DMA782282',   tercero: 'Tienda El Sol',        nit: '1039760460', valor: 303156,   cuenta: '41351219', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'CONFIRMADO', errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', tipo: 'NOTA_CREDITO',       subtipo: 'NOTA AVERIA-CAMBIO',          doc: 'DMA782283',   tercero: 'Tienda El Sol',        nit: '1039760460', valor: -15000,   cuenta: '41752319', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'CONFIRMADO', errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', tipo: 'RETENCION',          subtipo: 'RETEFTE',                     doc: 'DMA782282',   tercero: 'Tienda El Sol',        nit: '1039760460', valor: -9095,    cuenta: '23654001', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'PENDIENTE',  errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', tipo: 'GASTO_RUTA',         subtipo: 'PEAJE',                       doc: '—',           tercero: 'Concesión Vial',       nit: '900123456',  valor: 25000,    cuenta: '51309501', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'CONFIRMADO', errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', tipo: 'CONSIGNACION_BANCO', subtipo: '—',                           doc: 'REF-2847361', tercero: '—',                    nit: '—',          valor: 3000000,  cuenta: '11100501', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'ERROR',      errorSync: 'Diario no configurado', ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', tipo: 'CONSIGNACION_ALIADO',subtipo: 'ALPINA',                      doc: 'ALP-manual',  tercero: 'Alpina S.A.',          nit: '860002552',  valor: 1500000,  cuenta: '23100501', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'PENDIENTE',  errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', tipo: 'ANTICIPO_CLIENTE',   subtipo: 'ANTICIPO',                    doc: 'ANT-00123',   tercero: 'Tienda Mixta Nogales', nit: '1039760461', valor: 500000,   cuenta: '28051001', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'CONFIRMADO', errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.01', tipo: 'ANTICIPO_NOMINA',    subtipo: 'ANT_NOMINA',                  doc: '—',           tercero: 'Carlos López',         nit: '98480254',   valor: 70000,    cuenta: '25050501', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'ENVIADO',    errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.02', tipo: 'FACTURA_VENTA',      subtipo: 'FACTURA DE VENTA',            doc: 'DCM773827',   tercero: 'Minimercado Popalito', nit: '98480255',   valor: 150762,   cuenta: '41351205', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'CONFIRMADO', errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: 'DMA-110426.02', tipo: 'DESC_CONDICIONADO',  subtipo: 'NOTA DESCUENTO CONDICIONADO', doc: 'DCM773828',   tercero: 'Minimercado Popalito', nit: '98480255',   valor: -5000,    cuenta: '41755002', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'CONFIRMADO', errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: '—',             tipo: 'DESTINO_EFECTIVO',   subtipo: 'TRASLADO',                    doc: '—',           tercero: 'Bancolombia Cta1',     nit: '—',          valor: 4000000,  cuenta: '11100502', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'ENVIADO',    errorSync: '',                    ejecutado: 'María González' },
+  { recaudo: 'DMA-RD-110426', fecha: '11/04/2026', sede: 'Donmatías', cuadre: '—',             tipo: 'DESTINO_EFECTIVO',   subtipo: 'ANTICIPO_ALIADO',             doc: '—',           tercero: 'Alpina S.A.',          nit: '860002552',  valor: 2000000,  cuenta: '23100501', analitica: '{"7":100}', diario: 'VDA', estadoOdoo: 'PENDIENTE',  errorSync: '',                    ejecutado: 'María González' },
+
+  { recaudo: 'CAC-RD-110426', fecha: '11/04/2026', sede: 'Caucasia', cuadre: 'CAC-110426.01', tipo: 'FACTURA_VENTA',       subtipo: 'FACTURA DE VENTA', doc: 'CAC551201', tercero: 'Tienda Nogales',    nit: '1041220987', valor: 420000,  cuenta: '41351219', analitica: '{"10":100}', diario: 'VCA', estadoOdoo: 'CONFIRMADO', errorSync: '', ejecutado: 'Luisa Ramírez' },
+  { recaudo: 'CAC-RD-110426', fecha: '11/04/2026', sede: 'Caucasia', cuadre: 'CAC-110426.01', tipo: 'CONSIGNACION_ALIADO', subtipo: 'CARNICOS',         doc: 'CARN-00124', tercero: 'Zenú S.A.S.',       nit: '890900608',  valor: 2500000, cuenta: '23100502', analitica: '{"10":100}', diario: 'VCA', estadoOdoo: 'CONFIRMADO', errorSync: '', ejecutado: 'Luisa Ramírez' },
+  { recaudo: 'QBO-RD-110426', fecha: '11/04/2026', sede: 'Quibdó',   cuadre: 'QBO-110426.01', tipo: 'GASTO_RUTA',          subtipo: 'COMBUSTIBLE',      doc: '—',          tercero: 'EDS El Nogal',      nit: '900456789',  valor: 80000,   cuenta: '51309502', analitica: '{"14":100}', diario: 'VQB', estadoOdoo: 'PENDIENTE',  errorSync: '', ejecutado: 'Jorge Palacios' },
+  { recaudo: 'QBO-RD-110426', fecha: '11/04/2026', sede: 'Quibdó',   cuadre: '—',             tipo: 'DESTINO_EFECTIVO',    subtipo: 'ANTICIPO_ALIADO',  doc: '—',          tercero: 'Meals de Colombia', nit: '900100000',  valor: 950000,  cuenta: '23100503', analitica: '{"14":100}', diario: 'VQB', estadoOdoo: 'ERROR',      errorSync: 'Cuenta de anticipo sin parametrizar', ejecutado: 'Jorge Palacios' },
 ];
 
 const TIPOS_MOV = [
@@ -164,6 +188,7 @@ const Informes = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [tiposSeleccionados, setTiposSeleccionados] = useState<string[]>([]);
   const [showTiposDropdown, setShowTiposDropdown] = useState(false);
+  const [cajaSeleccionada, setCajaSeleccionada] = useState(CAJAS_MOVIMIENTO[0]);
 
   const toggleTipo = (tipo: string) => {
     setTiposSeleccionados(prev =>
@@ -274,14 +299,20 @@ const Informes = () => {
         <div className="bg-card border border-border rounded-lg p-5 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <DatabaseZap className="h-4 w-4 text-primary" />
-            <p className="text-sm font-semibold text-foreground">Filtros — Auditoría Máximo Detalle</p>
+            <p className="text-sm font-semibold text-foreground">Filtros — Movimiento de Caja</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <input type="text" placeholder="N° Recaudo (ej: DMA-RD-110426)" className="border border-input rounded-md px-3 py-2 text-sm bg-background col-span-2 lg:col-span-1" />
-            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background">
-              <option>Todas las sedes</option>
-              {sedes.map(s => <option key={s}>{s}</option>)}
-            </select>
+            <div>
+              <select
+                value={cajaSeleccionada}
+                onChange={e => setCajaSeleccionada(e.target.value)}
+                className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
+              >
+                {CAJAS_MOVIMIENTO.map(c => <option key={c}>{c}</option>)}
+              </select>
+              <p className="text-[10px] text-muted-foreground mt-1 leading-tight">Este informe es por una sola caja — no mezcla sedes.</p>
+            </div>
             <input type="text" placeholder="Desde" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background" />
             <input type="text" placeholder="Hasta" defaultValue="11/04/2026" className="border border-input rounded-md px-3 py-2 text-sm bg-background" />
             {/* Multi-select Tipo movimiento */}
@@ -308,14 +339,6 @@ const Informes = () => {
                 </div>
               )}
             </div>
-            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background">
-              <option>Todos los estados recaudo</option>
-              <option>Abierto</option>
-              <option>Cerrado Auxiliar</option>
-              <option>Enviado a revisión</option>
-              <option>Aprobado</option>
-              <option>Devuelto</option>
-            </select>
             <button className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:opacity-90 col-span-2 lg:col-span-1">
               <Download className="h-4 w-4" /> Descargar Excel
             </button>
@@ -667,58 +690,80 @@ const Informes = () => {
           </div>
         )}
 
-        {/* ── Tab 9: Auditoría Máximo Detalle ── */}
-        {activeTab === 9 && (
-          <div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ minWidth: '1800px' }}>
-                <thead>
-                  <tr className="bg-muted/70">
-                    {['N° Recaudo','Fecha','Sede','N° Cuadre','Planilla','Tipo movimiento','Sub-tipo','Documento','Cliente/Proveedor/Empleado','NIT','Valor','Cuenta contable','Cuenta analítica','Diario Odoo','Estado cuadre','Estado recaudo','Conductor','Placa','Ejecutado por'].map(h=>(
-                      <th key={h} className="text-left px-3 py-3 font-medium text-muted-foreground whitespace-nowrap text-xs">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditoriaMock.map((r, i) => (
-                    <tr key={i} className="border-t border-border table-row-alt">
-                      <td className="px-3 py-2 font-mono text-xs text-primary whitespace-nowrap">{r.recaudo}</td>
-                      <td className="px-3 py-2 text-xs whitespace-nowrap">{r.fecha}</td>
-                      <td className="px-3 py-2 text-xs">{r.sede}</td>
-                      <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{r.cuadre}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{r.planilla}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{badgeTipoMov(r.tipo)}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{r.subtipo}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{r.doc}</td>
-                      <td className="px-3 py-2 text-xs">{r.tercero}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{r.nit}</td>
-                      <td className={`px-3 py-2 font-mono text-xs text-right whitespace-nowrap font-medium ${r.valor < 0 ? 'text-destructive' : 'text-foreground'}`}>
-                        {r.valor < 0 ? `−${formatCurrency(Math.abs(r.valor))}` : formatCurrency(r.valor)}
-                      </td>
-                      <td className="px-3 py-2 font-mono text-xs">{r.cuenta}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.analitica}</td>
-                      <td className="px-3 py-2 text-xs">{r.diario}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{r.estCuadre}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{r.estRecaudo}</td>
-                      <td className="px-3 py-2 text-xs whitespace-nowrap">{r.conductor}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{r.placa}</td>
-                      <td className="px-3 py-2 text-xs">{r.ejecutado}</td>
+        {/* ── Tab 9: Movimiento de Caja ── */}
+        {activeTab === 9 && (() => {
+          const filas = movimientoCajaMock.filter(r => r.sede === cajaSeleccionada);
+          const saldoInicial = saldoInicialPorCaja[cajaSeleccionada];
+          const movimientoNeto = filas.reduce((s, r) => s + Math.abs(r.valor) * signoMovimientoCaja(r.tipo), 0);
+          const saldoFinal = saldoInicial + movimientoNeto;
+          return (
+            <div>
+              {/* Saldo inicial / final de la caja seleccionada */}
+              <div className="grid grid-cols-3 gap-4 p-5 bg-muted/30 border-b border-border">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Saldo inicial — {cajaSeleccionada}</p>
+                  <p className="text-xl font-bold font-mono text-foreground">{formatCurrency(saldoInicial)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Movimiento neto del período</p>
+                  <p className={`text-xl font-bold font-mono ${movimientoNeto >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {movimientoNeto >= 0 ? '+' : '−'}{formatCurrency(Math.abs(movimientoNeto))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Saldo final — {cajaSeleccionada}</p>
+                  <p className="text-xl font-bold font-mono text-primary">{formatCurrency(saldoFinal)}</p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" style={{ minWidth: '1500px' }}>
+                  <thead>
+                    <tr className="bg-muted/70">
+                      {['N° Recaudo','Fecha','N° Cuadre','Tipo movimiento','Sub-tipo','Documento','Cliente/Proveedor/Empleado','NIT','Valor','Cuenta contable','Cuenta analítica','Diario Odoo','Estado Odoo','Ejecutado por'].map(h=>(
+                        <th key={h} className="text-left px-3 py-3 font-medium text-muted-foreground whitespace-nowrap text-xs">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filas.length === 0 && (
+                      <tr><td colSpan={14} className="px-4 py-6 text-center text-muted-foreground">No hay movimientos aprobados para {cajaSeleccionada} en el período.</td></tr>
+                    )}
+                    {filas.map((r, i) => (
+                      <tr key={i} className="border-t border-border table-row-alt">
+                        <td className="px-3 py-2 font-mono text-xs text-primary whitespace-nowrap">{r.recaudo}</td>
+                        <td className="px-3 py-2 text-xs whitespace-nowrap">{r.fecha}</td>
+                        <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{r.cuadre}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{badgeTipoMov(r.tipo)}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{r.subtipo}</td>
+                        <td className="px-3 py-2 font-mono text-xs">{r.doc}</td>
+                        <td className="px-3 py-2 text-xs">{r.tercero}</td>
+                        <td className="px-3 py-2 font-mono text-xs">{r.nit}</td>
+                        <td className={`px-3 py-2 font-mono text-xs text-right whitespace-nowrap font-medium ${r.valor < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                          {r.valor < 0 ? `−${formatCurrency(Math.abs(r.valor))}` : formatCurrency(r.valor)}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs">{r.cuenta}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.analitica}</td>
+                        <td className="px-3 py-2 text-xs">{r.diario}</td>
+                        <td className="px-3 py-2 text-center">{badgeEstadoOdoo(r.estadoOdoo, r.errorSync)}</td>
+                        <td className="px-3 py-2 text-xs">{r.ejecutado}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Nota al pie */}
+              <div className="border-t border-border px-5 py-3 bg-muted/30">
+                <p className="text-xs text-muted-foreground">
+                  ℹ️ Solo se listan movimientos de recaudos ya <span className="font-semibold">aprobados</span> en Revisión (tablas históricas) — mientras un recaudo está en revisión, sus movimientos no aparecen aquí. Para el plano de asientos contables usa el informe{' '}
+                  <button onClick={() => setActiveTab(5)} className="text-primary underline underline-offset-2 hover:no-underline">
+                    Plano Asientos Odoo
+                  </button>.
+                </p>
+              </div>
             </div>
-            {/* Nota al pie */}
-            <div className="border-t border-border px-5 py-3 bg-muted/30">
-              <p className="text-xs text-muted-foreground">
-                ℹ️ Este informe muestra el detalle de cada transacción individual. Para el plano de asientos contables usa el informe{' '}
-                <button onClick={() => setActiveTab(5)} className="text-primary underline underline-offset-2 hover:no-underline">
-                  Plano Asientos Odoo
-                </button>.
-              </p>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── Tab 10: Plano Documentos ERP ── */}
         {activeTab === 10 && (
