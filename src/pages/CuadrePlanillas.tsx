@@ -161,27 +161,27 @@ const gastosMock22: GastoRuta22[] = [
   },
 ];
 
-// ── §2.6 — Anticipos de nómina ──
-type Concepto26 = 'ANT_NOMINA' | 'PASAJE' | 'ANT_VIATICOS';
-const conceptoLabels: Record<Concepto26, string> = {
+// ── §2.5 — Anticipos de nómina ──
+type Concepto25 = 'ANT_NOMINA' | 'PASAJE' | 'ANT_VIATICOS';
+const conceptoLabels: Record<Concepto25, string> = {
   ANT_NOMINA: 'Anticipo de nómina',
   PASAJE: 'Pasaje',
   ANT_VIATICOS: 'Anticipo viáticos',
 };
-interface AnticipoNomina26 {
+interface AnticipoNomina25 {
   id: string;
   empleado: string;
-  concepto: Concepto26;
+  concepto: Concepto25;
   cuentaAnaliticaId: string;
   cuentaAnaliticaNombre: string;
   valor: number;
 }
-const anticiposMock26: AnticipoNomina26[] = [
+const anticiposMock25: AnticipoNomina25[] = [
   { id: 'an1', empleado: 'Juan García', concepto: 'ANT_NOMINA', cuentaAnaliticaId: 'ca1', cuentaAnaliticaNombre: 'DMA-Alpina 100%', valor: 70000 },
   { id: 'an2', empleado: 'Carlos López', concepto: 'ANT_VIATICOS', cuentaAnaliticaId: 'ca2', cuentaAnaliticaNombre: 'DMA-Alpina+Cárnicos 50/50', valor: 150000 },
 ];
 
-const steps = ['Tripulación', 'Facturas', 'Gastos ruta', 'Consig. Riogrande', 'Consig. Aliados', 'Efectivo', 'Anticipos', 'Resumen'];
+const steps = ['Tripulación', 'Facturas', 'Gastos ruta', 'Consig. Riogrande', 'Consig. Aliados', 'Anticipos', 'Efectivo', 'Resumen'];
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
@@ -197,7 +197,7 @@ const CuadrePlanillas = () => {
 
   // ── Gastos / anticipos nómina ──
   const [gastos22, setGastos22] = useState<GastoRuta22[]>(gastosMock22);
-  const [anticipos26, setAnticipos26] = useState<AnticipoNomina26[]>(anticiposMock26);
+  const [anticipos25, setAnticipos25] = useState<AnticipoNomina25[]>(anticiposMock25);
 
   // ── Sección 2.3 — Consig. Riogrande ──
   const [consigDisponibles] = useState<ConsigDisponible[]>(consigDisponiblesMock);
@@ -267,7 +267,7 @@ const CuadrePlanillas = () => {
     const cert = certSeleccionadas[aliadoActivo] || [];
     return cert.reduce((s, c) => s + c.valor, 0);
   })();
-  const totalAnticipos = anticipos26.reduce((s, a) => s + a.valor, 0);
+  const totalAnticipos = anticipos25.reduce((s, a) => s + a.valor, 0);
   const efectivoTeorico = totalContado + totalAnticiposRecib21 - totalAnticipoCruz21 - totalGastos - totalConsigRio - totalConsigAli - totalAnticipos;
   const diferencia = efectivoReal - efectivoTeorico;
   const aprovechamientos = diferencia > 0 ? diferencia : 0;
@@ -1127,49 +1127,12 @@ const CuadrePlanillas = () => {
         })()}
       </section>
 
-      {/* ── §2.5 Conteo de efectivo ── */}
-      <section className="mb-8">
-        <h3 className="text-lg font-semibold text-foreground mb-4">2.5 — Conteo de efectivo</h3>
-        <div className="bg-card rounded-lg border border-border p-6">
-          <div className="grid grid-cols-3 gap-8">
-            <div>
-              <label className="text-sm text-muted-foreground mb-2 block">Efectivo teórico</label>
-              <div className="text-2xl font-bold text-muted-foreground bg-muted rounded-lg px-4 py-3">{formatCurrency(efectivoTeorico)}</div>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-2 block">Efectivo real</label>
-              <input
-                type="text"
-                value={formatCurrency(efectivoReal)}
-                onChange={(e) => {
-                  const num = parseInt(e.target.value.replace(/\D/g, '')) || 0;
-                  setEfectivoReal(num);
-                }}
-                className="text-2xl font-bold w-full rounded-lg border-2 border-primary/30 px-4 py-3 bg-background focus:outline-none focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-2 block">Diferencia</label>
-              <div className={`text-2xl font-bold rounded-lg px-4 py-3 ${diferencia >= 0 ? 'text-success bg-success/10' : 'text-destructive bg-destructive/10'
-                }`}>
-                {formatCurrency(diferencia)}
-              </div>
-              <p className={`text-sm mt-2 font-medium ${diferencia > 0 ? 'text-success' : diferencia === 0 ? 'text-success' : 'text-destructive'}`}>
-                {diferencia > 0 && 'Sobrante → va a Aprovechamientos'}
-                {diferencia === 0 && '✓ Cuadra exacto'}
-                {diferencia < 0 && '⚠ Faltante — debe registrar anticipo de nómina'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── §2.6 Anticipos de nómina ── */}
+      {/* ── §2.5 Anticipos de nómina ── */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">2.6 — Anticipos de nómina</h3>
+          <h3 className="text-lg font-semibold text-foreground">2.5 — Anticipos de nómina</h3>
           <button
-            onClick={() => setAnticipos26(prev => [...prev, {
+            onClick={() => setAnticipos25(prev => [...prev, {
               id: String(Date.now()),
               empleado: empleados[0],
               concepto: 'ANT_NOMINA',
@@ -1194,9 +1157,9 @@ const CuadrePlanillas = () => {
               </tr>
             </thead>
             <tbody>
-              {anticipos26.map((a) => {
-                const updateA = (patch: Partial<AnticipoNomina26>) =>
-                  setAnticipos26(prev => prev.map(x => x.id === a.id ? { ...x, ...patch } : x));
+              {anticipos25.map((a) => {
+                const updateA = (patch: Partial<AnticipoNomina25>) =>
+                  setAnticipos25(prev => prev.map(x => x.id === a.id ? { ...x, ...patch } : x));
                 return (
                   <tr key={a.id} className="border-t border-border hover:bg-muted/30 transition-colors">
 
@@ -1215,10 +1178,10 @@ const CuadrePlanillas = () => {
                     <td className="px-4 py-2.5">
                       <select
                         value={a.concepto}
-                        onChange={e => updateA({ concepto: e.target.value as Concepto26 })}
+                        onChange={e => updateA({ concepto: e.target.value as Concepto25 })}
                         className="border border-input rounded px-2 py-1 bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                       >
-                        {(Object.keys(conceptoLabels) as Concepto26[]).map(k => (
+                        {(Object.keys(conceptoLabels) as Concepto25[]).map(k => (
                           <option key={k} value={k}>{conceptoLabels[k]}</option>
                         ))}
                       </select>
@@ -1255,7 +1218,7 @@ const CuadrePlanillas = () => {
                     {/* DELETE */}
                     <td className="px-4 py-2.5">
                       <button
-                        onClick={() => setAnticipos26(prev => prev.filter(x => x.id !== a.id))}
+                        onClick={() => setAnticipos25(prev => prev.filter(x => x.id !== a.id))}
                         className="text-destructive hover:bg-destructive/10 rounded p-1 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -1271,6 +1234,44 @@ const CuadrePlanillas = () => {
               </tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* ── §2.6 Conteo de efectivo ── */}
+      <section className="mb-8">
+        <h3 className="text-lg font-semibold text-foreground mb-4">2.6 — Conteo de efectivo</h3>
+        <div className="bg-card rounded-lg border border-border p-6">
+          <div className="grid grid-cols-3 gap-8">
+            <div>
+              <label className="text-sm text-muted-foreground mb-2 block">Efectivo teórico</label>
+              <div className="text-2xl font-bold text-muted-foreground bg-muted rounded-lg px-4 py-3">{formatCurrency(efectivoTeorico)}</div>
+              <p className="text-xs text-muted-foreground mt-2 leading-tight">Se recalcula automáticamente al editar los anticipos de nómina (2.5) o cualquier sección anterior.</p>
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-2 block">Efectivo real</label>
+              <input
+                type="text"
+                value={formatCurrency(efectivoReal)}
+                onChange={(e) => {
+                  const num = parseInt(e.target.value.replace(/\D/g, '')) || 0;
+                  setEfectivoReal(num);
+                }}
+                className="text-2xl font-bold w-full rounded-lg border-2 border-primary/30 px-4 py-3 bg-background focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-2 block">Diferencia</label>
+              <div className={`text-2xl font-bold rounded-lg px-4 py-3 ${diferencia >= 0 ? 'text-success bg-success/10' : 'text-destructive bg-destructive/10'
+                }`}>
+                {formatCurrency(diferencia)}
+              </div>
+              <p className={`text-sm mt-2 font-medium ${diferencia > 0 ? 'text-success' : diferencia === 0 ? 'text-success' : 'text-destructive'}`}>
+                {diferencia > 0 && 'Sobrante → va a Aprovechamientos'}
+                {diferencia === 0 && '✓ Cuadra exacto'}
+                {diferencia < 0 && '⚠ Faltante — revise los anticipos de nómina registrados en 2.5'}
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

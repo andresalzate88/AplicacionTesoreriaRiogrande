@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { formatCurrency } from '@/lib/format';
 import { Check, Paperclip, AlertTriangle, Plus, Trash2, X, Upload } from 'lucide-react';
 
+const saldoAnteriorMock = 14500000;
+
 const cuadresMock = [
   { num: 'DMA-110426.01', planillas: 'DA-32926 / DA-32937', ventasCO: 22562905, ventasCR: 5070000, gastos: 935000, consigRio: 15574400, consigAli: 4800000, anticipos: 140000, hurtos: 0, efectivo: 1113305, difEfectivo: 500 },
   { num: 'DMA-110426.02', planillas: 'DC-32641', ventasCO: 5589617, ventasCR: 0, gastos: 320000, consigRio: 3200000, consigAli: 1200000, anticipos: 50000, hurtos: 0, efectivo: 819617, difEfectivo: 0 },
@@ -75,6 +77,14 @@ const RecaudoDiario = () => {
         </div>
         <span className="badge-info">En proceso</span>
       </div>
+
+      {/* Saldo anterior — disponible antes de iniciar el día */}
+      <section className="mb-8">
+        <div className="bg-card rounded-lg border border-border px-6 py-4 flex items-center justify-between">
+          <span className="text-sm font-medium text-muted-foreground">Saldo anterior en caja</span>
+          <span className="text-2xl font-bold font-mono text-primary">{formatCurrency(saldoAnteriorMock)}</span>
+        </div>
+      </section>
 
       {/* 3.1 Resumen cuadres */}
       <section className="mb-8">
@@ -380,6 +390,13 @@ const RecaudoDiario = () => {
               {destinos.length === 0 && (
                 <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No hay destinos registrados.</td></tr>
               )}
+              {destinos.length > 0 && (
+                <tr className="border-t-2 border-primary/20 bg-accent">
+                  <td colSpan={3} className="px-4 py-3 font-semibold">TOTAL</td>
+                  <td className="px-4 py-3 text-right font-mono font-bold">{formatCurrency(totalDispersado)}</td>
+                  <td></td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -392,7 +409,7 @@ const RecaudoDiario = () => {
           <div className="space-y-4 max-w-md">
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Saldo anterior:</span>
-              <span className="text-lg font-mono text-muted-foreground">{formatCurrency(14500000)}</span>
+              <span className="text-lg font-mono text-muted-foreground">{formatCurrency(saldoAnteriorMock)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-success font-medium">Efectivo de planillas:</span>
@@ -405,7 +422,7 @@ const RecaudoDiario = () => {
             <hr className="border-border" />
             <div className="flex justify-between items-center bg-accent rounded-lg px-4 py-3">
               <span className="font-bold text-lg">Nuevo saldo:</span>
-              <span className="text-2xl font-bold font-mono text-primary">{formatCurrency(14500000 + totalEfectivoPlanillas - totalDispersado)}</span>
+              <span className="text-2xl font-bold font-mono text-primary">{formatCurrency(saldoAnteriorMock + totalEfectivoPlanillas - totalDispersado)}</span>
             </div>
           </div>
         </div>
